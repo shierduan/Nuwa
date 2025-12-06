@@ -98,7 +98,6 @@ Nuwa/
 │   ├── memory_cortex.py    # 记忆皮层
 │   ├── memory_dreamer.py   # 记忆做梦系统
 │   └── personality.py      # 人格系统
-├── models/                 # Live2D 模型文件
 ├── main.py                 # 控制台入口
 ├── server.py               # WebSocket 服务器
 ├── main.js                 # 前端主脚本
@@ -128,7 +127,11 @@ npm install
 2. 下载 4B/12B 大小的 LLM 模型（如 gemma-3-4b-it-Q4_K_M.gguf 或 gemma-3-12b-it-Q4_K_M.gguf）
 3. 启动本地服务器，默认监听 `http://127.0.0.1:1234/v1`
 
-### 3. 启动服务
+### 3. 配置 Live2D 模型（可选）
+
+由于模型文件较大，本仓库不包含 Live2D 模型。如果你想使用完整的图形界面，需要自行准备 Live2D 模型文件，并将其放置在 `models/` 目录下。
+
+### 4. 启动服务
 
 #### 方式 1：控制台交互模式
 ```bash
@@ -140,7 +143,7 @@ python main.py
 python server.py
 ```
 
-### 4. 访问前端界面
+### 5. 访问前端界面
 
 ```bash
 # 直接在浏览器中打开
