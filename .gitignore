@@ -13,14 +13,14 @@ nuwa.log
 
 # 测试数据
 test_data/
-test_data/
-test/
 test/
 data/
 
 # 构建输出
 dist/
 build/
+electron-dist/
+electron-build/
 
 # 环境配置文件
 .env
@@ -41,14 +41,7 @@ build/
 *.bak
 .DS_Store
 
-# Electron构建输出
-electron-dist/
-electron-build/
-dist/
-build/
-
 # 内存数据文件
-*.lance/
 *.lance/
 
 # 分析报告
@@ -61,6 +54,10 @@ delete_memories.py
 
 # Windows系统文件
 Thumbs.db
+
+# 模型文件
+models/
+examples/
 
 # 其他
 *.zip
