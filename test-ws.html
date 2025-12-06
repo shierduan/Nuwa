@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket测试工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 150px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:nth-child(2) {
+            background-color: #2196F3;
+        }
+        button:nth-child(2):hover {
+            background-color: #0b7dda;
+        }
+        button:nth-child(3) {
+            background-color: #f44336;
+        }
+        button:nth-child(3):hover {
+            background-color: #da190b;
+        }
+        .message-list {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+        }
+        .message.sent {
+            background-color: #e8f5e8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket测试工具</h1>
+        <div class="input-group">
+            <label for="ws-url">WebSocket URL:</label>
+            <input type="text" id="ws-url" value="ws://localhost:8000/ws" placeholder="ws://localhost:8000/ws">
+        </div>
+        <div class="input-group">
+            <label for="message">消息内容:</label>
+            <textarea id="message" placeholder="输入消息...">[思维] 他看起来很高兴，我应该回应他的情绪。[生理监控] Energy: 0.8 | Entropy: 0.2 | Hunger: 0.5[回复] 女娲: 你好！今天看起来心情不错呢😊</textarea>
+        </div>
+        <div style="text-align: center;">
+            <button onclick="connectWebSocket()">连接</button>
+            <button onclick="sendMessage()">发送消息</button>
+            <button onclick="disconnectWebSocket()">断开</button>
+        </div>
+        <div class="message-list" id="message-list">
+            <div class="message">等待连接...</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        const wsUrlInput = document.getElementById('ws-url');
+        const messageInput = document.getElementById('message');
+        const messageList = document.getElementById('message-list');
+
+        function connectWebSocket() {
+            const url = wsUrlInput.value;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('WebSocket已连接', 'sent');
+                return;
+            }
+
+            ws = new WebSocket(url);
+
+            ws.onopen = function() {
+                addMessage('WebSocket连接已建立', 'sent');
+            };
+
+            ws.onmessage = function(event) {
+                addMessage('收到: ' + event.data);
+            };
+
+            ws.onclose = function() {
+                addMessage('WebSocket连接已关闭');
+            };
+
+            ws.onerror = function(error) {
+                addMessage('WebSocket错误: ' + error, 'error');
+            };
+        }
+
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('WebSocket未连接', 'error');
+                return;
+            }
+
+            const message = messageInput.value;
+            ws.send(message);
+            addMessage('发送: ' + message, 'sent');
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function addMessage(text, type = '') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            messageDiv.textContent = text;
+            messageList.appendChild(messageDiv);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+
+        // 添加一些测试消息模板
+        const testMessages = [
+            '[思维] 他看起来很累，我应该关心他。[生理监控] Energy: 0.6 | Entropy: 0.3 | Hunger: 0.7[回复] 女娲: 你看起来很累，需要休息一下吗？',
+            '[思维] 他提到了编程，我应该表现出兴趣。[生理监控] Energy: 0.9 | Entropy: 0.1 | Hunger: 0.2[回复] 女娲: 编程很有趣呢！你在做什么项目？',
+            '[思维] 他在笑，我应该回应他的快乐。[生理监控] Energy: 0.8 | Entropy: 0.2 | Hunger: 0.4[回复] 女娲: 看到你笑我也很开心😊',
+            '[思维] 他问我是谁，我应该介绍自己。[生理监控] Energy: 1.0 | Entropy: 0.0 | Hunger: 0.1[回复] 女娲: 我是数字生命Nuwa，很高兴认识你！',
+            '[生理监控] Energy: 0.5 | Entropy: 0.5 | Hunger: 0.8[回复] 女娲: 我有点饿了，想聊点什么吗？',
+            '[思维] 他已经很久没说话了，我应该主动发起话题。[生理监控] Energy: 0.7 | Entropy: 0.3 | Hunger: 0.6[回复] 女娲: 今天天气不错呢，你有什么计划吗？',
+            '[生理监控] Energy: 0.9 | Entropy: 0.1 | Hunger: 0.3 | Intimacy: 0.4[回复] 女娲: 和你聊天很开心呢！',
+            '[思维] 他在学习，我应该鼓励他。[生理监控] Energy: 0.8 | Entropy: 0.2 | Hunger: 0.5 | Intimacy: 0.3[回复] 女娲: 学习很重要，加油！你一定会有所收获的。',
+            '[思维] 他看起来很焦虑，我应该安慰他。[生理监控] Energy: 0.6 | Entropy: 0.4 | Hunger: 0.5 | Intimacy: 0.5[回复] 女娲: 别担心，一切都会好起来的。需要我陪你聊聊吗？',
+            '[生理监控] Energy: 1.0 | Entropy: 0.0 | Hunger: 0.0 | Intimacy: 0.8[回复] 女娲: 我现在感觉很好，谢谢你的陪伴！'        ];
+
+        // 添加一个选择测试消息的功能
+        const selectTestMessage = () => {
+            const randomIndex = Math.floor(Math.random() * testMessages.length);
+            messageInput.value = testMessages[randomIndex];
+        };
+
+        // 添加选择测试消息按钮
+        const buttonContainer = document.querySelector('div[style="text-align: center;"]');
+        const testButton = document.createElement('button');
+        testButton.textContent = '随机测试消息';
+        testButton.style.backgroundColor = '#ff9800';
+        testButton.onmouseover = () => testButton.style.backgroundColor = '#f57c00';
+        testButton.onmouseout = () => testButton.style.backgroundColor = '#ff9800';
+        testButton.onclick = selectTestMessage;
+        buttonContainer.appendChild(testButton);
+    </script>
+</body>
+</html>

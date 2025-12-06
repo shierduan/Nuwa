@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生理监控数据测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-data {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>生理监控数据解析测试</h1>
+    
+    <div class="test-container">
+        <h2>测试用例</h2>
+        <div class="test-data" id="test-data"></div>
+        <button onclick="runTest()">运行测试</button>
+        <div class="test-result" id="test-result"></div>
+    </div>
+    
+    <script>
+        // 测试数据
+        const testData = `[生理监控] 精力: 1.0000 | 混乱度: 0.3000 | 亲密度: 0.7000 
+               驱动力 -> 社交饥渴: 0.6219 | 好奇心: 0.1420 
+               情绪谱 -> 快乐:1.000 | 愤怒:0.000 | 悲伤:0.000 | 恐惧:0.000 | 信任:1.000 | 期待:1.000 `;
+        
+        // 显示测试数据
+        document.getElementById('test-data').textContent = testData;
+        
+        function runTest() {
+            const resultDiv = document.getElementById('test-result');
+            
+            try {
+                // 解析生理监控数据
+                const bioData = parseBioMonitorData(testData);
+                
+                if (bioData) {
+                    resultDiv.className = 'test-result success';
+                    resultDiv.innerHTML = `
+                        <h3>解析成功！</h3>
+                        <pre>${JSON.stringify(bioData, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'test-result error';
+                    resultDiv.innerHTML = '<h3>解析失败！</h3><p>未能匹配生理监控数据格式。</p>';
+                }
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = `<h3>解析错误！</h3><p>${error.message}</p>`;
+            }
+        }
+        
+        // 解析生理监控数据（复制自main.js）
+        function parseBioMonitorData(rawMessage) {
+            // 匹配新的生理监控数据格式
+            const bioRegex = /\[生理监控\].*?精力: ([0-9.]+) \| 混乱度: ([0-9.]+) \| 亲密度: ([0-9.]+)/i;
+            const bioMatch = rawMessage.match(bioRegex);
+            
+            if (bioMatch) {
+                const energy = parseFloat(bioMatch[1]);
+                const entropy = parseFloat(bioMatch[2]);
+                const intimacy = parseFloat(bioMatch[3]);
+                
+                // 匹配驱动力数据
+                const driveRegex = /驱动力 -> 社交饥渴: ([0-9.]+) \| 好奇心: ([0-9.]+)/i;
+                const driveMatch = rawMessage.match(driveRegex);
+                
+                const social_hunger = driveMatch ? parseFloat(driveMatch[1]) : 0.0;
+                const curiosity = driveMatch ? parseFloat(driveMatch[2]) : 0.0;
+                
+                // 匹配情绪谱数据
+                const emotionRegex = /情绪谱 -> 快乐:([0-9.]+) \| 愤怒:([0-9.]+) \| 悲伤:([0-9.]+) \| 恐惧:([0-9.]+) \| 信任:([0-9.]+) \| 期待:([0-9.]+)/i;
+                const emotionMatch = rawMessage.match(emotionRegex);
+                
+                const joy = emotionMatch ? parseFloat(emotionMatch[1]) : 0.0;
+                const anger = emotionMatch ? parseFloat(emotionMatch[2]) : 0.0;
+                const sadness = emotionMatch ? parseFloat(emotionMatch[3]) : 0.0;
+                const fear = emotionMatch ? parseFloat(emotionMatch[4]) : 0.0;
+                const trust = emotionMatch ? parseFloat(emotionMatch[5]) : 0.0;
+                const expectation = emotionMatch ? parseFloat(emotionMatch[6]) : 0.0;
+                
+                return {
+                    energy: energy,
+                    entropy: entropy,
+                    social_hunger: social_hunger,
+                    curiosity: curiosity,
+                    rapport: intimacy,
+                    joy: joy,
+                    anger: anger,
+                    sadness: sadness,
+                    fear: fear,
+                    trust: trust,
+                    expectation: expectation
+                };
+            }
+            
+            return null;
+        }
+    </script>
+</body>
+</html>

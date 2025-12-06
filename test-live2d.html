@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live2D测试页面</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .canvas-container {
+            width: 100%;
+            height: 600px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .test-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e8;
+            border-radius: 8px;
+        }
+        .test-info h2 {
+            margin-top: 0;
+            color: #4caf50;
+        }
+        .test-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .test-info li {
+            margin: 5px 0;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 8px;
+        }
+        .status h2 {
+            margin-top: 0;
+            color: #2196f3;
+        }
+        .status-item {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .status-label {
+            font-weight: bold;
+        }
+        .status-value {
+            color: #666;
+        }
+        .status-value.success {
+            color: #4caf50;
+        }
+        .status-value.error {
+            color: #f44336;
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3e0;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .debug-info h2 {
+            margin-top: 0;
+            color: #ff9800;
+        }
+        .debug-log {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0b7dda;
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+    </style>
+    <!-- PixiJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <!-- 本地 pixi-live2d-display -->
+    <script src="lib/pixi-live2d-display.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Live2D测试页面</h1>
+        
+        <div class="canvas-container" id="canvas-container"></div>
+        
+        <div class="test-info">
+            <h2>测试项目</h2>
+            <ul>
+                <li>Live2D模型加载</li>
+                <li>模型渲染</li>
+                <li>鼠标追踪（模型看向鼠标）</li>
+                <li>交互事件（双击触发动作）</li>
+                <li>状态更新</li>
+            </ul>
+        </div>
+        
+        <div class="status">
+            <h2>测试状态</h2>
+            <div class="status-item">
+                <span class="status-label">PixiJS加载:</span>
+                <span id="pixi-status" class="status-value">检查中...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">pixi-live2d-display加载:</span>
+                <span id="live2d-status" class="status-value">检查中...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">模型加载:</span>
+                <span id="model-status" class="status-value">等待加载...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">渲染状态:</span>
+                <span id="render-status" class="status-value">等待渲染...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">鼠标追踪:</span>
+                <span id="mouse-status" class="status-value">未启用...</span>
+            </div>
+        </div>
+        
+        <div class="debug-info">
+            <h2>调试日志</h2>
+            <div id="debug-logs"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="load-model">重新加载模型</button>
+            <button id="trigger-action">触发动作</button>
+            <button id="toggle-debug">切换调试模式</button>
+        </div>
+    </div>
+
+    <script>
+        // 调试日志
+        const debugLogs = document.getElementById('debug-logs');
+        const log = (message) => {
+            const logItem = document.createElement('div');
+            logItem.className = 'debug-log';
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugLogs.appendChild(logItem);
+            debugLogs.scrollTop = debugLogs.scrollHeight;
+        };
+        
+        // 状态更新函数
+        const updateStatus = (id, value, isSuccess = true) => {
+            const element = document.getElementById(id);
+            element.textContent = value;
+            element.className = `status-value ${isSuccess ? 'success' : 'error'}`;
+        };
+        
+        // 检查PixiJS和pixi-live2d-display是否加载成功
+        updateStatus('pixi-status', typeof PIXI !== 'undefined' ? '成功' : '失败', typeof PIXI !== 'undefined');
+        updateStatus('live2d-status', typeof PIXI.live2d !== 'undefined' ? '成功' : '失败', typeof PIXI.live2d !== 'undefined');
+        
+        // 初始化Pixi应用
+        let app;
+        let model;
+        let mouseTrackingEnabled = false;
+        
+        // 模型URL：改为加载本地 models/openSource 目录下的模型
+        const modelUrl = './models/openSource/openSource.model3.json';
+        
+        // 初始化函数
+        const init = () => {
+            log('初始化Pixi应用...');
+            
+            // 创建Pixi应用
+            app = new PIXI.Application({
+                width: document.getElementById('canvas-container').clientWidth,
+                height: 600,
+                transparent: true,
+                antialias: true,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true
+            });
+            
+            // 添加到容器
+            document.getElementById('canvas-container').appendChild(app.view);
+            
+            // 监听窗口大小变化
+            window.addEventListener('resize', () => {
+                app.renderer.resize(
+                    document.getElementById('canvas-container').clientWidth,
+                    600
+                );
+                if (model) {
+                    centerModel();
+                }
+            });
+            
+            // 加载模型
+            loadModel();
+        };
+        
+        // 加载模型
+        const loadModel = () => {
+            log('开始加载Live2D模型...');
+            updateStatus('model-status', '加载中...', false);
+            
+            PIXI.live2d.Live2DModel.from(modelUrl)
+                .then(m => {
+                    log('模型加载成功！');
+                    updateStatus('model-status', '成功');
+                    
+                    model = m;
+                    
+                    // 设置模型属性
+                    model.scale.set(1.0);
+                    model.interactive = true;
+                    model.buttonMode = true;
+                    
+                    // 中心模型
+                    centerModel();
+                    
+                    // 添加到舞台
+                    app.stage.addChild(model);
+                    updateStatus('render-status', '成功');
+                    
+                    // 启用鼠标追踪
+                    enableMouseTracking();
+                    
+                    // 绑定交互事件
+                    model.on('pointertap', (event) => {
+                        if (event.data.getClickCount() === 2) {
+                            triggerRandomMotion();
+                        }
+                    });
+                    
+                    log('模型初始化完成！');
+                })
+                .catch(error => {
+                    log(`模型加载失败: ${error}`);
+                    updateStatus('model-status', '失败', false);
+                    updateStatus('render-status', '失败', false);
+                });
+        };
+        
+        // 中心模型
+        const centerModel = () => {
+            if (!model) return;
+            
+            const bounds = model.getBounds();
+            model.x = (app.screen.width - bounds.width * model.scale.x) / 2;
+            model.y = app.screen.height - bounds.height * model.scale.y;
+        };
+        
+        // 启用鼠标追踪
+        const enableMouseTracking = () => {
+            if (!model) return;
+            
+            log('启用鼠标追踪...');
+            mouseTrackingEnabled = true;
+            updateStatus('mouse-status', '启用');
+            
+            // 监听鼠标移动
+            app.view.addEventListener('mousemove', (event) => {
+                if (!model || !model.internalModel) return;
+                
+                const point = app.renderer.plugins.interaction.mouse.global;
+                
+                // 设置模型看向鼠标
+                model.internalModel.setParamFloat(
+                    'ParamEyeBallX',
+                    (point.x - model.x) / app.screen.width * 2 - 1
+                );
+                model.internalModel.setParamFloat(
+                    'ParamEyeBallY',
+                    -(point.y - model.y) / app.screen.height * 2 + 1
+                );
+            });
+        };
+        
+        // 触发随机动作
+        const triggerRandomMotion = () => {
+            if (!model || !model.motions) {
+                log('无法触发动作：模型未加载或没有动作');
+                return;
+            }
+            
+            log('触发随机动作...');
+            
+            const motionGroups = Object.keys(model.motions);
+            if (motionGroups.length === 0) {
+                log('没有可用的动作');
+                return;
+            }
+            
+            const randomGroup = motionGroups[Math.floor(Math.random() * motionGroups.length)];
+            const motions = model.motions[randomGroup];
+            
+            if (motions && motions.length > 0) {
+                const randomMotion = motions[Math.floor(Math.random() * motions.length)];
+                model.motion(randomGroup, randomMotion.index);
+                log(`触发动作：${randomGroup} - ${randomMotion.index}`);
+            } else {
+                log('没有可用的动作');
+            }
+        };
+        
+        // 绑定控制按钮事件
+        document.getElementById('load-model').addEventListener('click', () => {
+            if (model) {
+                app.stage.removeChild(model);
+            }
+            loadModel();
+        });
+        
+        document.getElementById('trigger-action').addEventListener('click', () => {
+            triggerRandomMotion();
+        });
+        
+        document.getElementById('toggle-debug').addEventListener('click', () => {
+            if (model && model.internalModel) {
+                // 切换调试模式
+                const devTools = model.internalModel.devTools;
+                if (devTools) {
+                    devTools.visible = !devTools.visible;
+                    log(`调试模式已${devTools.visible ? '开启' : '关闭'}`);
+                } else {
+                    log('该模型不支持调试工具');
+                }
+            }
+        });
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+        
+        log('测试页面加载完成！');
+    </script>
+</body>
+</html>

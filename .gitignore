@@ -1,0 +1,70 @@
+# 依赖目录
+node_modules/
+libs/
+lib/
+
+# Python缓存
+__pycache__/
+*.pyc
+
+# 日志文件
+*.log
+nuwa.log
+
+# 测试数据
+test_data/
+test_data/
+test/
+test/
+data/
+
+# 构建输出
+dist/
+build/
+
+# 环境配置文件
+.env
+.env.local
+.env.*.local
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.trae/
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+.DS_Store
+
+# Electron构建输出
+electron-dist/
+electron-build/
+dist/
+build/
+
+# 内存数据文件
+*.lance/
+*.lance/
+
+# 分析报告
+CODE_ANALYSIS.md
+NUWA_CORE_ANALYSIS.md
+
+# 测试脚本
+inject_test_memories.py
+delete_memories.py
+
+# Windows系统文件
+Thumbs.db
+
+# 其他
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.tar.bz2

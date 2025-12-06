@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生物监控简单测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        #bio-monitor {
+            position: relative;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+        .bio-header {
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .bio-title {
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .bio-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .stat-item label {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .stat-bar-container {
+            position: relative;
+            height: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .stat-bar {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease;
+        }
+        .stat-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 8px;
+            font-weight: 600;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        .stat-bar.energy {
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            width: 0%;
+        }
+        .stat-bar.entropy {
+            background: linear-gradient(90deg, #c084fc, #a855f7);
+            width: 0%;
+        }
+        .stat-bar.hunger {
+            background: linear-gradient(90deg, #f87171, #ef4444);
+            width: 0%;
+        }
+        .stat-bar.curiosity {
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+            width: 0%;
+        }
+        .stat-bar.intimacy {
+            background: linear-gradient(90deg, #f9a8d4, #ec4899);
+            width: 0%;
+        }
+        .stat-bar.joy {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            width: 0%;
+        }
+        .stat-bar.anger {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            width: 0%;
+        }
+        .stat-bar.sadness {
+            background: linear-gradient(90deg, #6366f1, #4f46e5);
+            width: 0%;
+        }
+        .stat-bar.fear {
+            background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+            width: 0%;
+        }
+        .stat-bar.trust {
+            background: linear-gradient(90deg, #10b981, #059669);
+            width: 0%;
+        }
+        .stat-bar.expectation {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            width: 0%;
+        }
+        .test-controls {
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        button {
+            margin-right: 10px;
+        }
+        #console {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333;
+            color: #fff;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>生物监控数据测试</h1>
+    
+    <div id="bio-monitor" class="bio-monitor">
+        <div class="bio-header">
+            <span class="bio-title">生理监控</span>
+        </div>
+        <div class="bio-stats">
+            <div class="stat-item">
+                <label>精力</label>
+                <div class="stat-bar-container">
+                    <div id="energy-bar" class="stat-bar energy"></div>
+                    <span id="energy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>混乱度</label>
+                <div class="stat-bar-container">
+                    <div id="entropy-bar" class="stat-bar entropy"></div>
+                    <span id="entropy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>社交饥渴</label>
+                <div class="stat-bar-container">
+                    <div id="hunger-bar" class="stat-bar hunger"></div>
+                    <span id="hunger-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>好奇心</label>
+                <div class="stat-bar-container">
+                    <div id="curiosity-bar" class="stat-bar curiosity"></div>
+                    <span id="curiosity-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>亲密度</label>
+                <div class="stat-bar-container">
+                    <div id="intimacy-bar" class="stat-bar intimacy"></div>
+                    <span id="intimacy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>快乐</label>
+                <div class="stat-bar-container">
+                    <div id="joy-bar" class="stat-bar joy"></div>
+                    <span id="joy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>愤怒</label>
+                <div class="stat-bar-container">
+                    <div id="anger-bar" class="stat-bar anger"></div>
+                    <span id="anger-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>悲伤</label>
+                <div class="stat-bar-container">
+                    <div id="sadness-bar" class="stat-bar sadness"></div>
+                    <span id="sadness-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>恐惧</label>
+                <div class="stat-bar-container">
+                    <div id="fear-bar" class="stat-bar fear"></div>
+                    <span id="fear-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>信任</label>
+                <div class="stat-bar-container">
+                    <div id="trust-bar" class="stat-bar trust"></div>
+                    <span id="trust-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>期待</label>
+                <div class="stat-bar-container">
+                    <div id="expectation-bar" class="stat-bar expectation"></div>
+                    <span id="expectation-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-controls">
+        <textarea id="test-data" placeholder="输入测试数据...">[生理监控] 精力: 1.0000 | 混乱度: 0.3000 | 亲密度: 0.7000 
+               驱动力 -> 社交饥渴: 0.6219 | 好奇心: 0.1420 
+               情绪谱 -> 快乐:1.000 | 愤怒:0.000 | 悲伤:0.000 | 恐惧:0.000 | 信任:1.000 | 期待:1.000</textarea>
+        <br>
+        <button onclick="runTest()">运行测试</button>
+        <button onclick="clearConsole()">清空控制台</button>
+    </div>
+    
+    <div id="console"></div>
+    
+    <script>
+        // 日志函数
+        function log(message) {
+            const consoleDiv = document.getElementById('console');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleDiv.appendChild(logEntry);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        // 解析生理监控数据
+        function parseBioMonitorData(rawMessage) {
+            log('原始消息: ' + rawMessage);
+            
+            // 匹配新的生理监控数据格式，使用多行模式
+            const bioRegex = /\[生理监控\][\s\S]*?精力: ([0-9.]+) \| 混乱度: ([0-9.]+) \| 亲密度: ([0-9.]+)/i;
+            const bioMatch = rawMessage.match(bioRegex);
+            
+            if (bioMatch) {
+                log('匹配到基本数据: ' + bioMatch[0]);
+                const energy = parseFloat(bioMatch[1]);
+                const entropy = parseFloat(bioMatch[2]);
+                const intimacy = parseFloat(bioMatch[3]);
+                
+                // 匹配驱动力数据，使用多行模式
+                const driveRegex = /驱动力 -> 社交饥渴: ([0-9.]+) \| 好奇心: ([0-9.]+)/i;
+                const driveMatch = rawMessage.match(driveRegex);
+                
+                const social_hunger = driveMatch ? parseFloat(driveMatch[1]) : 0.0;
+                const curiosity = driveMatch ? parseFloat(driveMatch[2]) : 0.0;
+                
+                // 匹配情绪谱数据，使用多行模式
+                const emotionRegex = /情绪谱 -> 快乐:([0-9.]+) \| 愤怒:([0-9.]+) \| 悲伤:([0-9.]+) \| 恐惧:([0-9.]+) \| 信任:([0-9.]+) \| 期待:([0-9.]+)/i;
+                const emotionMatch = rawMessage.match(emotionRegex);
+                
+                const joy = emotionMatch ? parseFloat(emotionMatch[1]) : 0.0;
+                const anger = emotionMatch ? parseFloat(emotionMatch[2]) : 0.0;
+                const sadness = emotionMatch ? parseFloat(emotionMatch[3]) : 0.0;
+                const fear = emotionMatch ? parseFloat(emotionMatch[4]) : 0.0;
+                const trust = emotionMatch ? parseFloat(emotionMatch[5]) : 0.0;
+                const expectation = emotionMatch ? parseFloat(emotionMatch[6]) : 0.0;
+                
+                log('解析结果: ' + JSON.stringify({
+                    energy: energy,
+                    entropy: entropy,
+                    social_hunger: social_hunger,
+                    curiosity: curiosity,
+                    rapport: intimacy,
+                    joy: joy,
+                    anger: anger,
+                    sadness: sadness,
+                    fear: fear,
+                    trust: trust,
+                    expectation: expectation
+                }, null, 2));
+                
+                updateBioMonitor({
+                    energy: energy,
+                    entropy: entropy,
+                    social_hunger: social_hunger,
+                    curiosity: curiosity,
+                    rapport: intimacy,
+                    joy: joy,
+                    anger: anger,
+                    sadness: sadness,
+                    fear: fear,
+                    trust: trust,
+                    expectation: expectation
+                });
+            } else {
+                log('未匹配到生理监控数据');
+            }
+        }
+        
+        // 更新生理监控HUD
+        function updateBioMonitor(data) {
+            if (!data) return;
+            
+            log('更新生理监控数据: ' + JSON.stringify(data));
+            
+            // 更新能量
+            if (data.energy !== undefined) {
+                const energyPercent = data.energy * 100;
+                document.getElementById('energy-bar').style.width = `${energyPercent}%`;
+                document.getElementById('energy-value').textContent = data.energy.toFixed(1);
+            }
+            
+            // 更新熵值
+            if (data.entropy !== undefined) {
+                const entropyPercent = data.entropy * 100;
+                document.getElementById('entropy-bar').style.width = `${entropyPercent}%`;
+                document.getElementById('entropy-value').textContent = data.entropy.toFixed(1);
+            }
+            
+            // 更新社交饥渴
+            if (data.social_hunger !== undefined) {
+                const hungerPercent = data.social_hunger * 100;
+                document.getElementById('hunger-bar').style.width = `${hungerPercent}%`;
+                document.getElementById('hunger-value').textContent = data.social_hunger.toFixed(1);
+            }
+            
+            // 更新好奇心
+            if (data.curiosity !== undefined) {
+                const curiosityPercent = data.curiosity * 100;
+                document.getElementById('curiosity-bar').style.width = `${curiosityPercent}%`;
+                document.getElementById('curiosity-value').textContent = data.curiosity.toFixed(1);
+            }
+            
+            // 更新亲密度
+            if (data.rapport !== undefined) {
+                const intimacyPercent = data.rapport * 100;
+                document.getElementById('intimacy-bar').style.width = `${intimacyPercent}%`;
+                document.getElementById('intimacy-value').textContent = data.rapport.toFixed(1);
+            }
+            
+            // 更新快乐
+            if (data.joy !== undefined) {
+                const joyPercent = data.joy * 100;
+                document.getElementById('joy-bar').style.width = `${joyPercent}%`;
+                document.getElementById('joy-value').textContent = data.joy.toFixed(1);
+            }
+            
+            // 更新愤怒
+            if (data.anger !== undefined) {
+                const angerPercent = data.anger * 100;
+                document.getElementById('anger-bar').style.width = `${angerPercent}%`;
+                document.getElementById('anger-value').textContent = data.anger.toFixed(1);
+            }
+            
+            // 更新悲伤
+            if (data.sadness !== undefined) {
+                const sadnessPercent = data.sadness * 100;
+                document.getElementById('sadness-bar').style.width = `${sadnessPercent}%`;
+                document.getElementById('sadness-value').textContent = data.sadness.toFixed(1);
+            }
+            
+            // 更新恐惧
+            if (data.fear !== undefined) {
+                const fearPercent = data.fear * 100;
+                document.getElementById('fear-bar').style.width = `${fearPercent}%`;
+                document.getElementById('fear-value').textContent = data.fear.toFixed(1);
+            }
+            
+            // 更新信任
+            if (data.trust !== undefined) {
+                const trustPercent = data.trust * 100;
+                document.getElementById('trust-bar').style.width = `${trustPercent}%`;
+                document.getElementById('trust-value').textContent = data.trust.toFixed(1);
+            }
+            
+            // 更新期待
+            if (data.expectation !== undefined) {
+                const expectationPercent = data.expectation * 100;
+                document.getElementById('expectation-bar').style.width = `${expectationPercent}%`;
+                document.getElementById('expectation-value').textContent = data.expectation.toFixed(1);
+            }
+        }
+        
+        // 运行测试
+        function runTest() {
+            const testData = document.getElementById('test-data').value;
+            parseBioMonitorData(testData);
+        }
+        
+        // 清空控制台
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+        }
+        
+        // 页面加载完成后自动运行测试
+        window.onload = function() {
+            log('页面加载完成，准备运行测试...');
+            runTest();
+        };
+    </script>
+</body>
+</html>

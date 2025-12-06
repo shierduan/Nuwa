@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuwa - 数字生命</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- SweetAlert2本地版本 -->
+    <script src="node_modules/sweetalert2/dist/sweetalert2.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/sweetalert2@11';"></script>
+    <!-- Pixi & Live2D 本地优先：pixi -> live2dcubismcore -> cubism4 -> pixi-live2d-display(cubism4) -->
+    <script src="lib/vendor/pixi-6.5.10.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.10/browser/pixi.min.js';"></script>
+    <script src="lib/vendor/live2dcubismcore-4.2.0.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/live2dcubismcore@4.2.0-beta.1/live2dcubismcore.min.js';"></script>
+    <script src="node_modules/pixi-live2d-display/dist/cubism4.min.js" onerror="this.onerror=null;this.src='lib/vendor/cubism4.min.js';"></script>
+    <script src="node_modules/pixi-live2d-display/dist/index.min.js" onerror="this.onerror=null;this.src='lib/vendor/pixi-live2d-display.min.js';"></script>
+</head>
+<body>
+    <!-- Canvas容器 -->
+    <div id="canvas-container"></div>
+    
+    <!-- 右侧控制按钮 -->
+    <div class="control-buttons">
+        <button id="settings-btn" class="control-btn" title="设置">
+            <span class="control-icon">⚙️</span>
+        </button>
+        <button id="panel-btn" class="control-btn" title="面板">
+            <span class="control-icon">📊</span>
+        </button>
+        <button id="lock-btn" class="control-btn" title="锁定">
+            <span class="control-icon">🔒</span>
+        </button>
+    </div>
+    
+    <!-- 隐藏的设置菜单 -->
+    <div id="settings-menu" class="settings-menu">
+        <div class="settings-content">
+            <h3>设置</h3>
+            <div class="setting-item">
+                <label for="backend-url">后端URL</label>
+                <input type="text" id="backend-url" value="ws://localhost:8000/ws" placeholder="ws://localhost:8000/ws">
+            </div>
+            <div class="setting-item">
+                <label for="model-select">选择模型</label>
+                <select id="model-select" style="width: 100%; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; font-size: 14px; outline: none;">
+                    <option value="openSource">openSource</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-scale">模型缩放: <span id="scale-value">1.0</span></label>
+                <input type="range" id="model-scale" min="0.05" max="2.0" step="0.0125" value="1.0">
+            </div>
+            <div class="setting-item">
+                <label for="volume">音量: <span id="volume-value">50</span>%</label>
+                <input type="range" id="volume" min="0" max="100" step="5" value="50">
+            </div>
+            <!-- 表情按钮配置 -->
+            <div class="setting-item">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">表情按钮配置</label>
+                <div id="expression-configs" class="expression-configs">
+                    <!-- 动态生成8个表情配置项 -->
+                </div>
+            </div>
+            <div class="setting-item">
+                <label for="debug-mode">调试模式</label>
+                <input type="checkbox" id="debug-mode">
+            </div>
+            <div class="setting-actions">
+                <button id="save-settings">保存</button>
+                <button id="close-settings">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 调试日志 -->
+    <div id="debug-logs" class="debug-logs"></div>
+    
+    <!-- 对话气泡 -->
+    <div id="speech-bubble" class="speech-bubble"></div>
+    
+    <!-- Chat Trigger Button -->
+    <button id="chat-trigger" class="chat-trigger">
+        <span class="chat-trigger-icon">💬</span>
+    </button>
+    
+    <!-- Expression Buttons -->
+    <div id="expression-buttons" class="expression-buttons">
+        <button class="expression-btn" data-index="0" title="点击设置">表情1</button>
+        <button class="expression-btn" data-index="1" title="点击设置">表情2</button>
+        <button class="expression-btn" data-index="2" title="点击设置">表情3</button>
+        <button class="expression-btn" data-index="3" title="点击设置">表情4</button>
+        <button class="expression-btn" data-index="4" title="点击设置">表情5</button>
+        <button class="expression-btn" data-index="5" title="点击设置">表情6</button>
+        <button class="expression-btn" data-index="6" title="点击设置">表情7</button>
+        <button class="expression-btn" data-index="7" title="点击设置">表情8</button>
+    </div>
+    
+    <!-- Floating Input Bar -->
+    <div id="floating-input" class="floating-input">
+        <input type="text" id="message-input" placeholder="输入消息..." autocomplete="off">
+    </div>
+    
+    <!-- Bio-Monitor HUD -->
+    <div id="bio-monitor" class="bio-monitor">
+        <div class="bio-header">
+            <span class="bio-title">生理监控</span>
+        </div>
+        <div class="bio-stats">
+            <div class="stat-item">
+                <label>精力</label>
+                <div class="stat-bar-container">
+                    <div id="energy-bar" class="stat-bar energy"></div>
+                    <span id="energy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>混乱度</label>
+                <div class="stat-bar-container">
+                    <div id="entropy-bar" class="stat-bar entropy"></div>
+                    <span id="entropy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>社交饥渴</label>
+                <div class="stat-bar-container">
+                    <div id="hunger-bar" class="stat-bar hunger"></div>
+                    <span id="hunger-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>好奇心</label>
+                <div class="stat-bar-container">
+                    <div id="curiosity-bar" class="stat-bar curiosity"></div>
+                    <span id="curiosity-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>亲密度</label>
+                <div class="stat-bar-container">
+                    <div id="intimacy-bar" class="stat-bar intimacy"></div>
+                    <span id="intimacy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>快乐</label>
+                <div class="stat-bar-container">
+                    <div id="joy-bar" class="stat-bar joy"></div>
+                    <span id="joy-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>愤怒</label>
+                <div class="stat-bar-container">
+                    <div id="anger-bar" class="stat-bar anger"></div>
+                    <span id="anger-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>悲伤</label>
+                <div class="stat-bar-container">
+                    <div id="sadness-bar" class="stat-bar sadness"></div>
+                    <span id="sadness-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>恐惧</label>
+                <div class="stat-bar-container">
+                    <div id="fear-bar" class="stat-bar fear"></div>
+                    <span id="fear-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>信任</label>
+                <div class="stat-bar-container">
+                    <div id="trust-bar" class="stat-bar trust"></div>
+                    <span id="trust-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>期待</label>
+                <div class="stat-bar-container">
+                    <div id="expectation-bar" class="stat-bar expectation"></div>
+                    <span id="expectation-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>厌恶</label>
+                <div class="stat-bar-container">
+                    <div id="disgust-bar" class="stat-bar disgust"></div>
+                    <span id="disgust-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <label>惊讶</label>
+                <div class="stat-bar-container">
+                    <div id="surprise-bar" class="stat-bar surprise"></div>
+                    <span id="surprise-value" class="stat-value">0.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+    <script>
+        // 在页面加载完成后提示开发者工具（仅用于调试）
+        window.addEventListener('load', () => {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('在开发环境中，可以按F12打开开发者工具查看详细日志');
+            }
+        });
+    </script>
+</body>
+</html>
