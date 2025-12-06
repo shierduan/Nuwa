@@ -92,7 +92,7 @@ Nuwa/
 ├── index.html              # 前端界面
 ├── package.json            # Node.js 依赖
 ├── requirements.txt        # Python 依赖
-├── LICENSE                 # MIT 许可证
+├── LICENSE                 # Apache License 2.0 许可证
 └── README.md               # 项目文档
 ```
 
@@ -176,15 +176,9 @@ new_state_vector = evolve(state_vector, gradient, learning_rate=0.1)
 
 ## 📄 许可证
 
-本项目采用 **双许可证** 模式：
+本项目采用 **Apache License 2.0** 许可证，允许自由使用、修改和分发，包括商业用途。
 
-### 1. 开源许可证：MIT
-
-适用于个人使用和开源项目，允许自由使用、修改和分发，无需额外许可。
-
-### 2. 商业许可证
-
-适用于希望闭源使用的商业用户，需要联系原作者获得明确许可并协商适当条款。
+Apache License 2.0 是一个宽松的开源许可证，提供了专利保护和明确的条款，适合商业和非商业使用。
 
 ## 🙏 致谢
 
@@ -210,17 +204,17 @@ new_state_vector = evolve(state_vector, gradient, learning_rate=0.1)
 ## 📞 联系方式
 
 - 项目主页：https://github.com/shierduan/Nuwa
-- 商业许可咨询：[w416680040@gmail.com]
+
 
 ## 🚧 注意事项
 
 1. 本项目是**实验性**的，可能存在不稳定的地方
 2. 建议使用 LM Studio 的本地模型，避免 API 调用费用
 3. 数据目录中的文件包含数字生命的状态和记忆，请妥善保管
-4. 商业使用请联系原作者获得许可
+4. 项目采用 Apache License 2.0，商业使用无需额外许可
 
 ---
 
 **Nuwa** - 基于控制论与向量动力学的 AI Agent 框架
 
-© 2025 shier（shierduan） | 双许可证：MIT + 商业许可
+© 2025 shier（shierduan） | Apache License 2.0
