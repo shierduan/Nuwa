@@ -4,6 +4,7 @@ class NuwaFrontend {
         this.app = null;
         this.model = null;
         this.websocket = null;
+        this.reconnectTimer = null; // WebSocket重连定时器
         this.settings = {
             backendUrl: 'ws://127.0.0.1:8766',
             modelScale: 1.0,
@@ -895,6 +896,7 @@ class NuwaFrontend {
     // 初始化WebSocket连接
     initWebSocket() {
         this.log('===== 开始初始化WebSocket连接 =====');
+        this.log(`环境检测: Electron=${this.isElectron}, WebSocket支持=${typeof WebSocket !== 'undefined'}`);
         this.log(`连接URL: ${this.settings.backendUrl}`);
         
         try {
@@ -914,6 +916,12 @@ class NuwaFrontend {
                 const testMessage = { type: 'test', content: '连接测试' };
                 this.websocket.send(JSON.stringify(testMessage));
                 this.log('已发送测试消息:', testMessage);
+                
+                // 连接成功后清除重连定时器
+                if (this.reconnectTimer) {
+                    clearTimeout(this.reconnectTimer);
+                    this.reconnectTimer = null;
+                }
             };
             
             this.websocket.onmessage = (event) => {
@@ -935,8 +943,14 @@ class NuwaFrontend {
                 this.log('关闭原因:', event.code, event.reason);
                 this.log('是否正常关闭:', event.wasClean);
                 
-                // 不自动重连，避免频繁连接导致的问题
-                this.log('⚠️  WebSocket连接已关闭，将不再自动重连');
+                // 添加自动重连机制
+                if (!this.reconnectTimer) {
+                    this.log('⚠️  WebSocket连接已关闭，将在3秒后自动重连');
+                    this.reconnectTimer = setTimeout(() => {
+                        this.log('🔄 尝试重新连接WebSocket...');
+                        this.initWebSocket();
+                    }, 3000);
+                }
             };
             
             this.websocket.onerror = (error) => {
@@ -948,6 +962,15 @@ class NuwaFrontend {
         } catch (error) {
             this.log('❌ WebSocket初始化失败:', error.message);
             this.log('错误堆栈:', error.stack);
+            
+            // 初始化失败时也添加自动重连
+            if (!this.reconnectTimer) {
+                this.log('⚠️  WebSocket初始化失败，将在3秒后自动重试');
+                this.reconnectTimer = setTimeout(() => {
+                    this.log('🔄 尝试重新初始化WebSocket...');
+                    this.initWebSocket();
+                }, 3000);
+            }
         }
         this.log('===== WebSocket初始化完成 =====');
     }
@@ -1464,6 +1487,47 @@ class NuwaFrontend {
         this.triggerExpression(emotion).catch(error => {
             this.log(`⚠️ 设置情绪失败: ${error.message}`);
         });
+    }
+    
+    // 测试对话气泡显示
+    testSpeechBubble() {
+        this.log('===== 开始测试对话气泡 =====');
+        this.showSpeechBubble('测试对话气泡是否正常显示', true);
+        this.log('对话气泡测试完成');
+    }
+    
+    // 测试WebSocket连接
+    testWebSocketConnection() {
+        this.log('===== 开始测试WebSocket连接 =====');
+        this.log(`当前环境: Electron=${this.isElectron}`);
+        this.log(`当前WebSocket状态: ${this.websocket ? this.websocket.readyState : '未初始化'}`);
+        
+        // 强制重新初始化WebSocket
+        this.initWebSocket();
+        
+        // 5秒后检查连接状态
+        setTimeout(() => {
+            this.log(`5秒后WebSocket状态: ${this.websocket ? this.websocket.readyState : '未初始化'}`);
+            if (this.websocket) {
+                this.log(`连接状态描述: ${this.getWebSocketStateDescription(this.websocket.readyState)}`);
+            }
+        }, 5000);
+    }
+    
+    // 获取WebSocket状态描述
+    getWebSocketStateDescription(state) {
+        switch(state) {
+            case WebSocket.CONNECTING:
+                return 'CONNECTING (0) - 正在连接';
+            case WebSocket.OPEN:
+                return 'OPEN (1) - 连接成功';
+            case WebSocket.CLOSING:
+                return 'CLOSING (2) - 正在关闭';
+            case WebSocket.CLOSED:
+                return 'CLOSED (3) - 连接已关闭';
+            default:
+                return `UNKNOWN (${state}) - 未知状态`;
+        }
     }
     
     // 触发表达式（统一方法）

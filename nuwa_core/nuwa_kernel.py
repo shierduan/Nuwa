@@ -1215,7 +1215,29 @@ Instruction: When these traits conflict, prioritize higher weight traits.
             descriptions.append("社交饥渴：感到非常孤独，迫切希望有人陪伴。")
         elif social_hunger > 0.5:
             descriptions.append("社交需求：有点想找人说话，渴望互动。")
-
+        
+        # 复合情绪感知
+        anger = s.emotional_spectrum['anger']
+        disgust = s.emotional_spectrum['disgust']
+        trust = s.emotional_spectrum['trust']
+        if anger > 0.3 and disgust > 0.3:
+            descriptions.append(f"轻蔑与不屑：(Anger={anger:.2f}, Disgust={disgust:.2f}) 你不仅生气，还觉得对方很愚蠢/烦人。这种混合情绪让你想翻白眼，说话忍不住带刺。")
+        elif anger > 0.5:
+            descriptions.append(f"纯粹的怒火：(Anger={anger:.2f}) 你的忍耐到了极限，只想发泄出来。")
+        
+        if trust < 0.2 and (anger > 0.1 or disgust > 0.1):
+            descriptions.append("防御性敌意：你完全不信任对方，认为他在狡辩或欺骗，因此对他的一言一行都充满怀疑和抵触。")
+        
+        # 内分泌状态感知
+        cortisol = self.drive_system.neurotransmitters.get("cortisol", 0.0)
+        if cortisol > 0.7:
+            descriptions.append("生理压力过载：你的神经紧绷，感觉胸口有一团火散不去，任何新的刺激都会让你想爆发。")
+        
+        # 情绪状态感知
+        emotional_state = getattr(self.drive_system, "emotional_state", "NORMAL")
+        if emotional_state == "AGITATED":
+            descriptions.append("情绪闭锁期：你现在处于防御状态，拒绝接受对方的示好，只想保持冷漠或攻击。")
+        
         return "\n".join(descriptions) if descriptions else "（暂无明显生理感受）"
     
     def _build_system_prompt(self) -> str:

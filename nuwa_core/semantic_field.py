@@ -194,7 +194,15 @@ def calculate_potential_energy(
     energy_breakdown = {}
     total_energy = 0.0
     
+    # 确保向量是一维的
+    def ensure_1d_vector(vec: np.ndarray) -> np.ndarray:
+        """确保向量是一维的"""
+        if vec.ndim > 1:
+            return vec.flatten()
+        return vec
+    
     # 归一化当前向量
+    current_vector = ensure_1d_vector(current_vector)
     norm_current = np.linalg.norm(current_vector)
     if norm_current == 0:
         return float('inf'), {"error": "零向量"}
@@ -203,11 +211,14 @@ def calculate_potential_energy(
     
     # 1. E_character (人设势能)
     if character_core_vector is not None:
+        character_core_vector = ensure_1d_vector(character_core_vector)
         norm_char = np.linalg.norm(character_core_vector)
         if norm_char > 0:
             char_normalized = character_core_vector / norm_char
             # 计算余弦距离（1 - 余弦相似度）
             cosine_sim = np.dot(current_normalized, char_normalized)
+            # 确保cosine_sim是标量
+            cosine_sim = float(cosine_sim)
             cosine_distance = 1.0 - cosine_sim
             
             # 使用平方函数，使偏离更明显
@@ -221,11 +232,14 @@ def calculate_potential_energy(
     
     # 2. E_causality (因果势能)
     if prev_vector is not None:
+        prev_vector = ensure_1d_vector(prev_vector)
         norm_prev = np.linalg.norm(prev_vector)
         if norm_prev > 0:
             prev_normalized = prev_vector / norm_prev
             # 计算余弦距离
             cosine_sim = np.dot(current_normalized, prev_normalized)
+            # 确保cosine_sim是标量
+            cosine_sim = float(cosine_sim)
             cosine_distance = 1.0 - cosine_sim
             
             # 因果势能：突变会产生高能量
@@ -239,11 +253,14 @@ def calculate_potential_energy(
     
     # 3. E_plot (剧情引力)
     if goal_vector is not None:
+        goal_vector = ensure_1d_vector(goal_vector)
         norm_goal = np.linalg.norm(goal_vector)
         if norm_goal > 0:
             goal_normalized = goal_vector / norm_goal
             # 计算余弦距离
             cosine_sim = np.dot(current_normalized, goal_normalized)
+            # 确保cosine_sim是标量
+            cosine_sim = float(cosine_sim)
             cosine_distance = 1.0 - cosine_sim
             
             # 剧情引力：距离目标越远，能量越高
