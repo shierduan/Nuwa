@@ -112,7 +112,7 @@ class NuwaState:
         
         Returns:
             numpy 向量，包含所有核心数值属性
-            向量维度: 1 (energy) + 1 (system_entropy) + 6 (emotional_spectrum) + 2 (drives) + 1 (rapport) = 11维
+            向量维度: 1 (energy) + 1 (system_entropy) + 8 (emotional_spectrum) + 2 (drives) + 1 (rapport) = 13维
         """
         if not NUMPY_AVAILABLE or np is None:
             raise ImportError("NumPy is required for to_vector() method")
@@ -127,6 +127,8 @@ class NuwaState:
             self.emotional_spectrum["fear"],
             self.emotional_spectrum["trust"],
             self.emotional_spectrum["anticipation"],
+            self.emotional_spectrum["disgust"],
+            self.emotional_spectrum["surprise"],
             self.drives["social_hunger"],
             self.drives["curiosity"],
             self.rapport,
