@@ -2674,6 +2674,9 @@ class NuwaFrontend {
         // 添加electron类到body
         document.body.classList.add('electron');
         
+        // 加载并初始化Electron特有设置
+        this.loadElectronSettings();
+        
         // 窗口置顶设置
         const alwaysOnTopCheckbox = document.getElementById('always-on-top');
         alwaysOnTopCheckbox.addEventListener('change', (event) => {
@@ -2692,6 +2695,38 @@ class NuwaFrontend {
             // 显示在任务栏的设置在Electron主进程中处理，这里可以添加相应的逻辑
             this.log('显示在任务栏设置已更新:', event.target.checked);
         });
+    }
+    
+    // 加载Electron特有设置
+    loadElectronSettings() {
+        if (!this.isElectron) return;
+        
+        // 从localStorage加载Electron特有设置
+        const savedAlwaysOnTop = localStorage.getItem('nuwa_always_on_top');
+        const savedMouseThrough = localStorage.getItem('nuwa_mouse_through');
+        const savedShowTaskbar = localStorage.getItem('nuwa_show_taskbar');
+        
+        // 窗口置顶设置
+        const alwaysOnTopCheckbox = document.getElementById('always-on-top');
+        // 优先使用localStorage保存的设置，如果没有则使用默认值true
+        const alwaysOnTop = savedAlwaysOnTop !== null ? savedAlwaysOnTop === 'true' : true;
+        alwaysOnTopCheckbox.checked = alwaysOnTop;
+        // 立即发送到主进程，确保状态同步
+        this.ipcRenderer.send('toggle-always-on-top', alwaysOnTop);
+        this.log('窗口置顶设置已初始化:', alwaysOnTop);
+        
+        // 鼠标穿透设置
+        const mouseThroughCheckbox = document.getElementById('mouse-through');
+        const mouseThrough = savedMouseThrough !== null ? savedMouseThrough === 'true' : false;
+        mouseThroughCheckbox.checked = mouseThrough;
+        this.ipcRenderer.send('set-ignore-mouse-events', mouseThrough, { forward: true });
+        this.log('鼠标穿透设置已初始化:', mouseThrough);
+        
+        // 显示在任务栏设置
+        const showTaskbarCheckbox = document.getElementById('show-taskbar');
+        const showTaskbar = savedShowTaskbar !== null ? savedShowTaskbar === 'true' : true;
+        showTaskbarCheckbox.checked = showTaskbar;
+        this.log('显示在任务栏设置已初始化:', showTaskbar);
     }
     
     // 切换设置菜单
@@ -2759,6 +2794,11 @@ class NuwaFrontend {
                 localStorage.setItem('nuwa_window_height', windowHeight.value);
             }
             
+            // 保存Electron特有设置到localStorage
+            localStorage.setItem('nuwa_always_on_top', alwaysOnTop);
+            localStorage.setItem('nuwa_mouse_through', mouseThrough);
+            localStorage.setItem('nuwa_show_taskbar', showTaskbar);
+            
             // 保存到设置对象
             this.settings.alwaysOnTop = alwaysOnTop;
             this.settings.mouseThrough = mouseThrough;
@@ -2767,6 +2807,7 @@ class NuwaFrontend {
             // 发送到主进程
             this.ipcRenderer.send('toggle-always-on-top', alwaysOnTop);
             this.ipcRenderer.send('set-ignore-mouse-events', mouseThrough, { forward: true });
+            this.log('Electron特有设置已保存到localStorage');
         }
         
         // 保存表情配置

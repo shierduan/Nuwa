@@ -197,6 +197,10 @@ def calculate_potential_energy(
     # 确保向量是一维的
     def ensure_1d_vector(vec: np.ndarray) -> np.ndarray:
         """确保向量是一维的"""
+        if isinstance(vec, (list, tuple)):
+            vec = np.array(vec)
+        elif not isinstance(vec, np.ndarray):
+            vec = np.array(vec)
         if vec.ndim > 1:
             return vec.flatten()
         return vec
@@ -218,7 +222,7 @@ def calculate_potential_energy(
             # 计算余弦距离（1 - 余弦相似度）
             cosine_sim = np.dot(current_normalized, char_normalized)
             # 确保cosine_sim是标量
-            cosine_sim = float(cosine_sim)
+            cosine_sim = float(np.sum(cosine_sim) if isinstance(cosine_sim, np.ndarray) else cosine_sim)
             cosine_distance = 1.0 - cosine_sim
             
             # 使用平方函数，使偏离更明显
@@ -239,7 +243,7 @@ def calculate_potential_energy(
             # 计算余弦距离
             cosine_sim = np.dot(current_normalized, prev_normalized)
             # 确保cosine_sim是标量
-            cosine_sim = float(cosine_sim)
+            cosine_sim = float(np.sum(cosine_sim) if isinstance(cosine_sim, np.ndarray) else cosine_sim)
             cosine_distance = 1.0 - cosine_sim
             
             # 因果势能：突变会产生高能量
@@ -260,7 +264,7 @@ def calculate_potential_energy(
             # 计算余弦距离
             cosine_sim = np.dot(current_normalized, goal_normalized)
             # 确保cosine_sim是标量
-            cosine_sim = float(cosine_sim)
+            cosine_sim = float(np.sum(cosine_sim) if isinstance(cosine_sim, np.ndarray) else cosine_sim)
             cosine_distance = 1.0 - cosine_sim
             
             # 剧情引力：距离目标越远，能量越高
@@ -331,7 +335,8 @@ def calculate_gradient(
         vector_plus = normalized_current.copy()
         vector_plus[i] += epsilon
         # 保持归一化
-        vector_plus = normalize_vector(vector_plus) or vector_plus
+        normalized_vec = normalize_vector(vector_plus)
+        vector_plus = normalized_vec if normalized_vec is not None else vector_plus
         
         # 计算能量差
         energy_plus, _ = calculate_potential_energy(
