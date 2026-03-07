@@ -14,7 +14,7 @@ import time
 import json
 import os
 import threading  # 用于状态锁
-from typing import Dict, Optional, Set, Any, List
+from typing import Dict, Optional, Set, Any, List, Callable
 from dataclasses import dataclass, field, asdict
 
 try:
@@ -23,6 +23,16 @@ try:
 except ImportError:
     np = None
     NUMPY_AVAILABLE = False
+
+# 导入事件系统
+try:
+    from .state_events import StateEvent, StateEventType, StateEventEmitter
+    EVENTS_AVAILABLE = True
+except ImportError:
+    EVENTS_AVAILABLE = False
+    StateEventEmitter = None
+    StateEventType = None
+    StateEvent = None
 
 
 @dataclass
@@ -98,6 +108,9 @@ class NuwaState:
     
     # 内部线程锁（不参与序列化）
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    
+    # 事件发射器（不参与序列化）
+    _event_emitter: Optional[StateEventEmitter] = field(default=None, init=False, repr=False, compare=False)
 
     # 核心事实白名单：这些键会被强制包含
     _core_keys: Set[str] = field(default_factory=lambda: {"user_name", "user_role", "relationship", "developer"}, repr=False)
@@ -105,6 +118,48 @@ class NuwaState:
     def __post_init__(self):
         # 反序列化后重新创建锁，避免跨进程序列化问题
         self._lock = threading.Lock()
+        
+        # 初始化事件发射器
+        if EVENTS_AVAILABLE:
+            self._event_emitter = StateEventEmitter()
+        else:
+            self._event_emitter = None
+    
+    # ==================== 事件系统方法 ====================
+    
+    def add_event_listener(self, event_type: Optional[StateEventType], callback: Callable[[StateEvent], None]):
+        """添加事件监听器"""
+        if self._event_emitter:
+            self._event_emitter.add_listener(event_type, callback)
+    
+    def remove_event_listener(self, event_type: Optional[StateEventType], callback: Callable[[StateEvent], None]):
+        """移除事件监听器"""
+        if self._event_emitter:
+            self._event_emitter.remove_listener(event_type, callback)
+    
+    def emit_event(self, event_type: StateEventType, data: Dict[str, Any], source: str = "system"):
+        """发射事件"""
+        if self._event_emitter and EVENTS_AVAILABLE:
+            event = StateEvent.create(event_type, data, source)
+            self._event_emitter.emit(event)
+    
+    def get_event_listener_count(self, event_type: Optional[StateEventType] = None) -> int:
+        """获取监听器数量"""
+        if not self._event_emitter:
+            return 0
+        return self._event_emitter.get_listener_count(event_type)
+    
+    def _emit_state_change(self, change_type: str, old_value: Any, new_value: Any, source: str = "system"):
+        """便捷方法：发射状态变化事件"""
+        self.emit_event(
+            StateEventType.STATE_UPDATED,
+            {
+                "change_type": change_type,
+                "old_value": old_value,
+                "new_value": new_value
+            },
+            source
+        )
     
     def to_vector(self) -> 'np.ndarray':
         """
@@ -117,47 +172,72 @@ class NuwaState:
         if not NUMPY_AVAILABLE or np is None:
             raise ImportError("NumPy is required for to_vector() method")
         
-        # 构建向量
-        vector_parts = [
-            self.energy,
-            self.system_entropy,
-            self.emotional_spectrum["joy"],
-            self.emotional_spectrum["anger"],
-            self.emotional_spectrum["sadness"],
-            self.emotional_spectrum["fear"],
-            self.emotional_spectrum["trust"],
-            self.emotional_spectrum["anticipation"],
-            self.emotional_spectrum["disgust"],
-            self.emotional_spectrum["surprise"],
-            self.drives["social_hunger"],
-            self.drives["curiosity"],
-            self.rapport,
-        ]
+        with self._lock:
+            # 构建向量
+            vector_parts = [
+                self.energy,
+                self.system_entropy,
+                self.emotional_spectrum["joy"],
+                self.emotional_spectrum["anger"],
+                self.emotional_spectrum["sadness"],
+                self.emotional_spectrum["fear"],
+                self.emotional_spectrum["trust"],
+                self.emotional_spectrum["anticipation"],
+                self.emotional_spectrum["disgust"],
+                self.emotional_spectrum["surprise"],
+                self.drives["social_hunger"],
+                self.drives["curiosity"],
+                self.rapport,
+            ]
         
         return np.array(vector_parts, dtype=np.float32)
     
-    def clamp_values(self):
+    def clamp_values(self, source: str = "system"):
         """
         将所有数值限制在有效范围内
+        
+        Args:
+            source: 来源
         """
+        clamped_changes = []
+        
         # 限制 energy 在 [0.0, 1.0]
+        old_energy = self.energy
         self.energy = max(0.0, min(1.0, self.energy))
+        if abs(self.energy - old_energy) > 0.001:
+            clamped_changes.append(("energy", old_energy, self.energy))
         
         # 限制 system_entropy 在 [0.0, 1.0]
+        old_entropy = self.system_entropy
         self.system_entropy = max(0.0, min(1.0, self.system_entropy))
+        if abs(self.system_entropy - old_entropy) > 0.001:
+            clamped_changes.append(("system_entropy", old_entropy, self.system_entropy))
         
         # 限制所有情绪值在 [0.0, 1.0]
         for emotion in self.emotional_spectrum:
+            old_value = self.emotional_spectrum[emotion]
             self.emotional_spectrum[emotion] = max(0.0, min(1.0, self.emotional_spectrum[emotion]))
+            if abs(self.emotional_spectrum[emotion] - old_value) > 0.001:
+                clamped_changes.append((f"emotion_{emotion}", old_value, self.emotional_spectrum[emotion]))
         
         # 限制所有驱动力值在 [0.0, 1.0]
         for drive in self.drives:
+            old_value = self.drives[drive]
             self.drives[drive] = max(0.0, min(1.0, self.drives[drive]))
+            if abs(self.drives[drive] - old_value) > 0.001:
+                clamped_changes.append((f"drive_{drive}", old_value, self.drives[drive]))
         
         # 限制 rapport 在 [0.0, 1.0]
+        old_rapport = self.rapport
         self.rapport = max(0.0, min(1.0, self.rapport))
+        if abs(self.rapport - old_rapport) > 0.001:
+            clamped_changes.append(("rapport", old_rapport, self.rapport))
         
-        # uptime 和 timestamp 不需要限制
+        # 发射被限制的事件
+        if clamped_changes and self._event_emitter and EVENTS_AVAILABLE:
+            self.emit_event(StateEventType.STATE_CLAMPED, {
+                "changes": [{"field": f[0], "old": f[1], "new": f[2]} for f in clamped_changes]
+            }, source)
     
     def to_dict(self) -> Dict:
         """
@@ -316,23 +396,52 @@ class NuwaState:
             normalized_source = "auto"
 
         with self._lock:
+            old_value = self.fact_book.get(key)
+            
             if normalized_source == "dream":
                 if key in self.fact_book and self.fact_book[key] != value:
                     print(f"🛡️ [State] 拒绝梦境覆盖事实: {key} | 原值: {self.fact_book[key]} | 梦境值: {value}")
+                    # 发射事实被拒绝事件
+                    if self._event_emitter and EVENTS_AVAILABLE:
+                        self.emit_event(StateEventType.FACT_REJECTED, {
+                            "key": key,
+                            "old_value": self.fact_book[key],
+                            "new_value": value,
+                            "reason": "dream_coverage_denied"
+                        }, source)
                     return False
                 # key 不存在或值相同 -> 允许写入/保持
                 self.fact_book[key] = value
+                # 发射事实更新事件
+                if self._event_emitter and EVENTS_AVAILABLE:
+                    event_type = StateEventType.FACT_ADDED if old_value is None else StateEventType.FACT_UPDATED
+                    self.emit_event(event_type, {
+                        "key": key,
+                        "old_value": old_value,
+                        "new_value": value,
+                        "source": normalized_source
+                    }, source)
                 return True
 
             # user_interaction 或 auto，直接写入
             self.fact_book[key] = value
+            # 发射事实事件
+            if self._event_emitter and EVENTS_AVAILABLE:
+                event_type = StateEventType.FACT_ADDED if old_value is None else StateEventType.FACT_UPDATED
+                self.emit_event(event_type, {
+                    "key": key,
+                    "old_value": old_value,
+                    "new_value": value,
+                    "source": normalized_source
+                }, source)
             return True
-    def save_to_file(self, file_path: str) -> bool:
+    def save_to_file(self, file_path: str, source: str = "system") -> bool:
         """
         保存状态到文件
         
         Args:
             file_path: 文件路径
+            source: 来源
         
         Returns:
             是否保存成功
@@ -348,18 +457,33 @@ class NuwaState:
                 f.flush()  # 立即刷新缓冲区
                 os.fsync(f.fileno())  # 强制写入磁盘
             
+            # 发射保存成功事件
+            if self._event_emitter and EVENTS_AVAILABLE:
+                self.emit_event(StateEventType.STATE_SAVED, {
+                    "file_path": file_path,
+                    "size": len(json.dumps(state_dict))
+                }, source)
+            
             return True
         except Exception as e:
             print(f"⚠️ 保存状态失败: {e}")
+            # 发射保存失败事件
+            if self._event_emitter and EVENTS_AVAILABLE:
+                self.emit_event(StateEventType.STATE_SAVED, {
+                    "file_path": file_path,
+                    "error": str(e),
+                    "success": False
+                }, source)
             return False
     
     @classmethod
-    def load_from_file(cls, file_path: str) -> Optional['NuwaState']:
+    def load_from_file(cls, file_path: str, event_emitter: Optional[StateEventEmitter] = None) -> Optional['NuwaState']:
         """
         从文件加载状态
         
         Args:
             file_path: 文件路径
+            event_emitter: 可选的事件发射器
         
         Returns:
             NuwaState 实例，如果加载失败则返回 None
@@ -371,7 +495,20 @@ class NuwaState:
             with open(file_path, 'r', encoding='utf-8') as f:
                 state_dict = json.load(f)
             
-            return cls.from_dict(state_dict)
+            state = cls.from_dict(state_dict)
+            
+            # 如果提供了事件发射器，使用它
+            if event_emitter and EVENTS_AVAILABLE:
+                state._event_emitter = event_emitter
+            
+            # 发射加载成功事件
+            if state._event_emitter and EVENTS_AVAILABLE:
+                state.emit_event(StateEventType.STATE_LOADED, {
+                    "file_path": file_path,
+                    "size": len(json.dumps(state_dict))
+                }, "system")
+            
+            return state
         except Exception as e:
             print(f"⚠️ 加载状态失败: {e}")
             return None
@@ -388,6 +525,110 @@ class NuwaState:
         """
         return self.save_to_file(path)
     
+    def update(self, delta_time: float = 1.0, source: str = "system"):
+        """
+        更新状态
+        
+        Args:
+            delta_time: 时间步长（秒）
+            source: 更新来源
+        """
+        with self._lock:
+            # 记录旧值用于事件
+            old_energy = self.energy
+            old_entropy = self.system_entropy
+            old_rapport = self.rapport
+            old_emotions = self.emotional_spectrum.copy()
+            old_drives = self.drives.copy()
+            
+            # 更新运行时间
+            self.uptime += delta_time
+            
+            # 精力自然衰减
+            self.energy = max(0.0, min(1.0, self.energy - 0.001 * delta_time))
+            
+            # 系统熵自然增长
+            self.system_entropy = max(0.0, min(1.0, self.system_entropy + 0.0005 * delta_time))
+            
+            # 亲密度自然衰减
+            self.rapport = max(0.0, min(1.0, self.rapport - 0.0002 * delta_time))
+            
+            # 驱动力动态调整
+            for drive in self.drives:
+                # 驱动力自然增长
+                self.drives[drive] = max(0.0, min(1.0, self.drives[drive] + 0.0005 * delta_time))
+            
+            # 情绪自然衰减
+            for emotion in self.emotional_spectrum:
+                # 情绪强度自然衰减
+                self.emotional_spectrum[emotion] = max(0.0, min(1.0, self.emotional_spectrum[emotion] - 0.001 * delta_time))
+            
+            # 更新对话活动跟踪（仅保留最近100条）
+            if len(self.conversation_history) > 100:
+                self.conversation_history = self.conversation_history[-100:]
+            
+            # 发射变化事件
+            if self._event_emitter and EVENTS_AVAILABLE:
+                # 精力变化
+                if abs(self.energy - old_energy) > 0.001:
+                    self.emit_event(StateEventType.ENERGY_CHANGED, {
+                        "old": old_energy,
+                        "new": self.energy,
+                        "delta": self.energy - old_energy
+                    }, source)
+                
+                # 熵值变化
+                if abs(self.system_entropy - old_entropy) > 0.001:
+                    self.emit_event(StateEventType.ENTROPY_CHANGED, {
+                        "old": old_entropy,
+                        "new": self.system_entropy,
+                        "delta": self.system_entropy - old_entropy
+                    }, source)
+                
+                # 亲密度变化
+                if abs(self.rapport - old_rapport) > 0.001:
+                    self.emit_event(StateEventType.RAPPORT_CHANGED, {
+                        "old": old_rapport,
+                        "new": self.rapport,
+                        "delta": self.rapport - old_rapport
+                    }, source)
+                
+                # 情绪变化（检测显著变化）
+                emotion_changes = {}
+                for emotion in self.emotional_spectrum:
+                    if abs(self.emotional_spectrum[emotion] - old_emotions[emotion]) > 0.01:
+                        emotion_changes[emotion] = {
+                            "old": old_emotions[emotion],
+                            "new": self.emotional_spectrum[emotion],
+                            "delta": self.emotional_spectrum[emotion] - old_emotions[emotion]
+                        }
+                
+                if emotion_changes:
+                    self.emit_event(StateEventType.EMOTION_SPECTRUM_CHANGED, {
+                        "changes": emotion_changes
+                    }, source)
+                
+                # 驱动力变化
+                drive_changes = {}
+                for drive in self.drives:
+                    if abs(self.drives[drive] - old_drives[drive]) > 0.01:
+                        drive_changes[drive] = {
+                            "old": old_drives[drive],
+                            "new": self.drives[drive],
+                            "delta": self.drives[drive] - old_drives[drive]
+                        }
+                
+                if drive_changes:
+                    self.emit_event(StateEventType.DRIVE_CHANGED, {
+                        "changes": drive_changes
+                    }, source)
+                
+                # 通用状态更新事件
+                self.emit_event(StateEventType.STATE_UPDATED, {
+                    "delta_time": delta_time,
+                    "uptime": self.uptime
+                }, source)
+    
     @staticmethod
     def load(path: str) -> 'NuwaState':
         """
@@ -399,7 +640,7 @@ class NuwaState:
             path: 文件路径
         
         Returns:
-            NuwaState 实例（如果文件不存在，返回默认状态）
+            NuwaState 实例
         """
         loaded_state = NuwaState.load_from_file(path)
         if loaded_state:

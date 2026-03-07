@@ -7,13 +7,9 @@ EMBEDDING_ENV_VAR = "NUWA_EMBEDDING_MODEL_PATH"
 MODEL_CACHE_ROOT_VAR = "NUWA_MODEL_CACHE_DIR"
 
 # 默认缓存目录：~/.nuwa/models/all-MiniLM-L6-v2
-# 兼容旧版本：如果 NUWA 环境变量不存在，尝试使用 TAIYI 环境变量
 _default_cache_root = os.environ.get(
     MODEL_CACHE_ROOT_VAR,
-    os.environ.get(
-        "TAIYI_MODEL_CACHE_DIR",  # 兼容旧版本
-        os.path.join(os.path.expanduser("~"), ".nuwa", "models"),
-    )
+    os.path.join(os.path.expanduser("~"), ".nuwa", "models"),
 )
 DEFAULT_EMBEDDING_DIR = os.path.join(_default_cache_root, EMBEDDING_MODEL_NAME)
 
@@ -50,8 +46,8 @@ def ensure_embedding_model_dir(loader_cls: Optional[Callable], verbose: bool = T
 
         candidates = []
 
-        # 1) 环境变量显式指定（优先使用 NUWA，兼容 TAIYI）
-        env_path = os.environ.get(EMBEDDING_ENV_VAR) or os.environ.get("TAIYI_EMBEDDING_MODEL_PATH")
+        # 1) 环境变量显式指定
+        env_path = os.environ.get(EMBEDDING_ENV_VAR)
         if env_path:
             candidates.append(env_path)
 
@@ -74,6 +70,10 @@ def ensure_embedding_model_dir(loader_cls: Optional[Callable], verbose: bool = T
         try:
             if verbose:
                 print(f"📥 正在下载嵌入模型 {EMBEDDING_MODEL_NAME} 到 {target_dir} ...")
+                # 检查是否设置了 HF_ENDPOINT 环境变量
+                hf_endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co")
+                print(f"📡 使用模型源: {hf_endpoint}")
+            # 下载模型
             model = loader_cls(EMBEDDING_MODEL_NAME)
             model.save(target_dir)
             _embedding_dir_cache = target_dir
@@ -83,5 +83,7 @@ def ensure_embedding_model_dir(loader_cls: Optional[Callable], verbose: bool = T
         except Exception as e:
             if verbose:
                 print(f"❌ 下载嵌入模型失败：{e}")
+                print("💡 尝试设置环境变量 HF_ENDPOINT 为国内源，例如：")
+                print("   set HF_ENDPOINT=https://hf-mirror.com")
             return None
 

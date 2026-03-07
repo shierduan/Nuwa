@@ -1,0 +1,312 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "女娲核心系统监控",
+    "tags": ["nuwa", "ai-system", "production"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "请求响应时间分布",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.5, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "yAxes": [
+          {
+            "label": "响应时间 (ms)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "LLM调用成功率",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(llm_calls_total{status=\"success\"}[5m]) / rate(llm_calls_total[5m])",
+            "legendFormat": "成功率",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.9},
+                {"color": "green", "value": 0.95}
+              ]
+            },
+            "unit": "percentunit"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "记忆检索效率",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(memory_retrieval_duration_seconds_sum[5m]) / rate(memory_retrieval_duration_seconds_count[5m])",
+            "legendFormat": "平均检索时间",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "yAxes": [
+          {
+            "label": "时间 (秒)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "内存使用趋势",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "内存使用 (MB)",
+            "refId": "A"
+          },
+          {
+            "expr": "process_cpu_seconds_total",
+            "legendFormat": "CPU时间 (秒)",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "yAxes": [
+          {
+            "label": "内存 (MB) / CPU (秒)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "情感状态分布",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "nuwa_emotion_valence_bucket",
+            "legendFormat": "效价 (Valence)",
+            "refId": "A"
+          },
+          {
+            "expr": "nuwa_emotion_arousal_bucket",
+            "legendFormat": "唤醒 (Arousal)",
+            "refId": "B"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "系统吞吐量",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "每秒请求数",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16},
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "PID控制器参数",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pid_kp",
+            "legendFormat": "Kp",
+            "refId": "A"
+          },
+          {
+            "expr": "pid_ki",
+            "legendFormat": "Ki",
+            "refId": "B"
+          },
+          {
+            "expr": "pid_kd",
+            "legendFormat": "Kd",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "yAxes": [
+          {
+            "label": "PID参数值",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "RL训练状态",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rl_training_episodes",
+            "legendFormat": "训练轮次",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "options": {
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 9,
+        "title": "错误率",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])",
+            "legendFormat": "错误率",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+        "options": {
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 0.01},
+                {"color": "red", "value": 0.05}
+              ]
+            },
+            "unit": "percentunit"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "黎曼几何计算耗时",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(riemannian_potential_duration_seconds_sum[5m]) / rate(riemannian_potential_duration_seconds_count[5m])",
+            "legendFormat": "势能计算",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(riemannian_gradient_duration_seconds_sum[5m]) / rate(riemannian_gradient_duration_seconds_count[5m])",
+            "legendFormat": "梯度计算",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(riemannian_evolution_duration_seconds_sum[5m]) / rate(riemannian_evolution_duration_seconds_count[5m])",
+            "legendFormat": "演化计算",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "yAxes": [
+          {
+            "label": "时间 (秒)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "记忆节点数量",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "memory_graph_nodes",
+            "legendFormat": "节点数",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 24},
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 12,
+        "title": "系统健康状态",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "服务状态",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 24},
+        "options": {
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "mappings": [
+              {"value": 0, "text": "DOWN", "color": "red"},
+              {"value": 1, "text": "UP", "color": "green"}
+            ]
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "annotations": {
+      "list": []
+    }
+  }
+}

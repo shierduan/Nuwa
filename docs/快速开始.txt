@@ -1,0 +1,127 @@
+🚀 女娲项目 - 快速开始指南
+═════════════════════════════════════════════════════════
+
+【最简单的方式 - 一键启动】
+
+1. 双击打开: 启动管理器.html
+2. 点击: "一键启动" 按钮
+3. 等待自动启动完成
+4. 开始对话！
+
+═════════════════════════════════════════════════════════
+
+【手动启动 - 分步指南】
+
+第1步: 启动WebSocket服务器
+  打开终端，进入项目目录，运行:
+  python server_async.py
+
+第2步: 等待服务器就绪
+  看到提示: "🚀 WebSocket server started on ws://127.0.0.1:8766"
+
+第3步: 打开前端界面
+  方法A: 双击打开 index.html
+  方法B: 在浏览器中打开: 启动管理器.html
+
+第4步: 开始对话
+  点击聊天按钮 💬
+  输入消息
+  按回车发送
+
+═════════════════════════════════════════════════════════
+
+【四种启动方式对比】
+
+方式1: 控制台模式
+  命令: python main_async.py
+  适合: 开发调试，查看完整思维过程
+  注意: 当前不支持TTS语音输出
+
+方式2: WebSocket服务器
+  命令: python server_async.py
+  适合: 为前端提供服务，必须先启动
+  注意: 支持文本流，音频流待实现
+
+方式3: 浏览器前端
+  操作: 双击 index.html 或 启动管理器.html
+  适合: 快速预览，Live2D展示
+  注意: 可通过API调用TTS功能
+
+方式4: Electron应用
+  命令: npm run start
+  适合: 桌面应用，高级功能
+  注意: TTS功能待集成
+
+【TTS功能说明】
+
+✅ 已实现（多模态处理器）
+  - 文本转语音 (VITS模型)
+  - 语音识别 (Whisper模型)
+  - 图像理解 (CLIP模型)
+
+⚠️ 进行中（核心集成）
+  - 内核集成: nuwa_kernel_async.py
+  - 配置管理: config_manager.py
+  - 状态管理: nuwa_state.py
+
+❌ 待实现
+  - WebSocket音频流
+  - 控制台TTS输出
+  - 音频文件缓存
+
+快速测试TTS:
+  python -c "from nuwa_core.multimodal_processor import MultimodalProcessor; p = MultimodalProcessor(); p.text_to_speech('你好，我是女娲')"
+
+详细说明: 查看 docs/TTS集成指南.md
+
+═════════════════════════════════════════════════════════
+
+【文件说明】
+
+启动管理器.html    - 统一启动界面（推荐）
+启动指南.md        - 详细使用文档
+index.html         - 浏览器前端
+main.js            - 前端核心逻辑
+main_async.py      - 控制台交互模式
+server_async.py    - WebSocket服务器
+electron-main.js   - Electron主进程
+launch_server.py   - 启动管理器后端（可选）
+quick_start.txt    - 本文件
+
+═════════════════════════════════════════════════════════
+
+【常见问题】
+
+Q: 页面显示"未连接"？
+A: 请先运行: python server_async.py
+
+Q: 找不到模型文件？
+A: 检查 models/openSource/ 目录是否存在
+
+Q: Electron无法启动？
+A: 运行: npm install 安装依赖
+
+Q: Python报错？
+A: 运行: pip install -r requirements.txt
+
+Q: 如何启用TTS（语音）功能？
+A: 1. 安装依赖: pip install transformers torch soundfile
+   2. 测试TTS: python -c "from nuwa_core.multimodal_processor import MultimodalProcessor; p = MultimodalProcessor(); p.text_to_speech('测试')"
+   3. 详细说明: 查看 docs/TTS集成指南.md
+
+Q: TTS功能很慢或占用内存高？
+A: 1. 首次加载模型需要2-3秒，后续会更快
+   2. 建议使用GPU: pip install torch --index-url https://download.pytorch.org/whl/cu118
+   3. 查看 docs/TTS集成指南.md 的性能优化章节
+
+═════════════════════════════════════════════════════════
+
+【需要帮助？】
+
+查看详细文档: 启动指南.md
+检查环境: 在启动管理器中点击"环境检查"
+联系开发者: 查看项目README.md
+
+═════════════════════════════════════════════════════════
+
+祝您使用愉快！🎉

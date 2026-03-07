@@ -1,0 +1,38 @@
+# Prometheus 配置文件
+# 用于收集女娲系统的监控指标
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'nuwa-core'
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  # 女娲核心服务指标
+  - job_name: 'nuwa-core'
+    static_configs:
+      - targets: ['nuwa-core:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    params:
+      format: ['prometheus']
+
+  # Prometheus自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter（系统指标）
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+# 警报配置（可选）
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []

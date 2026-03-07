@@ -1,0 +1,15 @@
+{
+  "id": "nuwa-chat",
+  "channels": ["nuwa"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "websocketUrl": {
+        "type": "string",
+        "default": "ws://127.0.0.1:8766",
+        "description": "女娲系统WebSocket服务器地址"
+      }
+    }
+  }
+}

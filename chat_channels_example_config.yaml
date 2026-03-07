@@ -1,0 +1,20 @@
+# 聊天渠道配置示例
+
+chat_channels:
+  # 飞书配置
+  feishu:
+    appId: "your_feishu_app_id"
+    appSecret: "your_feishu_app_secret"
+    domain: "feishu"  # 可选值：feishu 或 lark
+
+  # 钉钉配置
+  dingtalk:
+    appKey: "your_dingtalk_app_key"
+    appSecret: "your_dingtalk_app_secret"
+    agentId: "your_dingtalk_agent_id"
+
+  # 企业微信配置
+  wecom:
+    corpId: "your_wecom_corp_id"
+    corpSecret: "your_wecom_corp_secret"
+    agentId: "your_wecom_agent_id"

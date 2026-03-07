@@ -1,0 +1,73 @@
+# 女娲AI - 配置文件示例
+# 支持YAML/JSON/环境变量加载
+
+# ========== LLM 配置 ==========
+llm_base_url: "http://127.0.0.1:1234/v1"
+llm_api_key: "lm-studio"
+llm_model_name: "local-model"
+llm_temperature: 0.7
+llm_max_tokens: 512
+
+# ========== 生物节律配置 ==========
+energy_recovery_rate: 0.0003
+energy_consumption_base: 0.04
+energy_consumption_system: 0.005
+energy_critical_threshold: 0.05
+
+# ========== 记忆系统配置 ==========
+memory_ttl_days: 30
+memory_max_retrieval: 5
+memory_emotion_weight: 0.3
+
+# ========== 缓存配置 ==========
+cache_enabled: true
+cache_ttl: 300
+cache_vector_maxsize: 5000
+cache_response_maxsize: 100
+cache_memory_maxsize: 200
+cache_state_maxsize: 50
+
+# ========== 内存优化配置 ==========
+memory_history_max: 50
+memory_warning_mb: 500.0
+memory_critical_mb: 1000.0
+memory_cleanup_interval: 60.0
+
+# ========== 状态管理配置 ==========
+state_save_interval: 30.0
+state_file_name: "state.json"
+
+# ========== 梦境系统配置 ==========
+dream_interval: 900.0
+dream_batch_size: 1000
+
+# ========== 主动对话配置 ==========
+active_dialogue_cooldown: 30.0
+social_hunger_threshold: 0.6
+active_trigger_probability: 0.3
+
+# ========== 人格演化配置 ==========
+evolution_cooldown: 21600.0
+
+# ========== 项目路径配置 ==========
+project_name: "nuwa"
+data_dir: "data"
+model_dir: "models"
+
+# ========== 系统配置 ==========
+enable_heartbeat: true
+enable_debug_mode: false
+log_level: "INFO"
+
+# ========== 使用说明 ==========
+# 1. 重命名此文件为 config.yaml
+# 2. 修改配置值以匹配你的环境
+# 3. 在代码中使用:
+#    config = NuwaConfig.from_file("config.yaml")
+#    kernel = KernelDI(config=config)
+
+# ========== 环境变量配置 ==========
+# 也可以使用环境变量（前缀 NUWA_）:
+# export NUWA_LLM_BASE_URL="http://127.0.0.1:1234/v1"
+# export NUWA_CACHE_ENABLED="true"
+# export NUWA_MEMORY_HISTORY_MAX="100"

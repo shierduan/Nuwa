@@ -5,7 +5,7 @@
 
 核心功能：
 - BioRhythm: 生物节律控制器，管理状态的动态演化
-- PIDController: PID 控制器（复用太一引擎的逻辑），用于情绪回归控制
+- PIDController: PID 控制器，用于情绪回归控制
 """
 
 import math

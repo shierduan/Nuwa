@@ -1,0 +1,48 @@
+active_dialogue_cooldown: 30.0
+active_trigger_probability: 0.3
+cache_enabled: true
+cache_memory_maxsize: 200
+cache_response_maxsize: 100
+cache_state_maxsize: 50
+cache_ttl: 300
+cache_vector_maxsize: 5000
+channels:
+  feishu:
+    appId: cli_a9201497d7385bcd
+    appSecret: NN9IbjF9WTPqWg9X5oUiQfUAacIjz5OV
+    domain: feishu
+    enabled: true
+    # 机器人名字（用于识别@消息）
+    botName: "女娲"
+    # 主动消息发送目标（可选）
+    # 格式: chat:xxx 表示群聊, user:xxx 表示私聊
+    # 例如: active_message_target: "chat:oc_xxx" 或 "user:ou_xxx"
+    active_message_target: "chat:oc_5ffa484be52430bcb35ed94262d8c9ff"
+data_dir: data
+dream_batch_size: 1000
+dream_interval: 900.0
+enable_debug_mode: false
+enable_heartbeat: true
+energy_consumption_base: 0.04
+energy_consumption_system: 0.005
+energy_critical_threshold: 0.05
+energy_recovery_rate: 0.0003
+evolution_cooldown: 21600.0
+llm_api_key: 4447f043-a16f-4b73-8209-32ff5dbf5535
+llm_base_url: https://ark.cn-beijing.volces.com/api/v3
+llm_max_tokens: 12000
+llm_model_name: ep-20260306005226-whxk9
+llm_temperature: 0.7
+log_level: INFO
+memory_cleanup_interval: 60.0
+memory_critical_mb: 1000.0
+memory_emotion_weight: 0.3
+memory_history_max: 50
+memory_max_retrieval: 5
+memory_ttl_days: 30
+memory_warning_mb: 500.0
+model_dir: models
+project_name: nuwa
+social_hunger_threshold: 0.6
+state_file_name: state.json
+state_save_interval: 30.0

@@ -254,3 +254,14 @@ Instruction: When these traits conflict, prioritize higher weight traits.
         """
         self.state["evolution_history"] = []
         return self.save_state()
+    
+    def reward(self, value: float):
+        """
+        给予奖励，用于强化学习
+        
+        Args:
+            value: 奖励值
+        """
+        # 这里可以实现具体的奖励机制
+        # 例如，记录成功次数，调整权重等
+        print(f"[SelfEvolutionState] 获得奖励: {value}")

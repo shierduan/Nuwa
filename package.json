@@ -1,11 +1,13 @@
 {
   "name": "nuwa-frontend",
   "version": "1.0.0",
-  "description": "数字生命Nuwa的前端界面",
+  "description": "Nuwa Digital Life - Frontend and Manager",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
+    "manager": "electron \"启动管理器.html\"",
+    "debug": "electron debug.html",
     "build": "electron-builder",
     "build:win": "electron-builder --win --x64",
     "build:mac": "electron-builder --mac",
@@ -15,9 +17,10 @@
     "live2d",
     "electron",
     "digital-life",
-    "nuwa"
+    "nuwa",
+    "manager"
   ],
-  "author": "",
+  "author": "Nuwa Team",
   "license": "MIT",
   "devDependencies": {
     "electron": "^25.9.8",
@@ -34,19 +37,15 @@
       "style.css",
       "main.js",
       "electron-main.js",
-      "package.json"
+      "package.json",
+      "启动管理器.html",
+      "debug.html",
+      "nuwa_main.py",
+      "server_async.py",
+      "manager.html"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "icons/icon.ico"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "icons/icon.icns"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "icons/icon.png"
+      "target": "nsis"
     }
   },
   "dependencies": {

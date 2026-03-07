@@ -22,7 +22,7 @@ import sys
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nuwa_core.nuwa_kernel import NuwaKernel
+from nuwa_core.nuwa_kernel_async import NuwaKernelAsync as NuwaKernel
 from nuwa_core.memory_cortex import MemoryCortex
 
 

@@ -2,11 +2,10 @@
 女娲核心引擎 (Nuwa Core Engine)
 
 一个完整的、独立的核心引擎包，包含：
-- 女娲内核：类人AI对话系统
-- 太一引擎：小说创作逻辑推演系统（兼容保留）
+- 女娲内核：类人AI对话系统（统一异步架构）
 
 核心模块：
-- nuwa_kernel: 女娲内核，类人AI对话系统
+- nuwa_kernel_async: 女娲内核（统一异步架构），类人AI对话系统
 - nuwa_state: 女娲状态管理
 - drive_system: 生物节律系统
 - memory_cortex: 记忆皮层
@@ -14,15 +13,17 @@
 - personality: 人格管理模块
 - self_evolution: 自我进化模块
 - self_evolution_state: 自我进化状态管理
-- state_machine: 状态机模块（太一引擎）
-- causality_judge: 因果律判官模块（太一引擎）
-- momentum_tracker: 叙事势能模块（太一引擎）
-- semantic_field: 语义场论核心算法
-- engine: 引擎控制器（太一引擎）
+- cache_manager: 缓存管理器
+- memory_optimizer: 内存优化器
+- riemannian_semantic_field: 黎曼几何语义场
+- adaptive_pid: 自适应PID控制
+
+注意：nuwa_kernel.py 已废弃，统一使用 nuwa_kernel_async.py
 """
 
-# 女娲内核相关
-from .nuwa_kernel import NuwaKernel
+# 女娲内核相关（统一为异步架构，保持向后兼容）
+from .nuwa_kernel_async import NuwaKernelAsync as NuwaKernel
+from .nuwa_kernel_async import NuwaKernelAsync  # 同时导出新的异步内核名称
 from .nuwa_state import NuwaState
 from .drive_system import BioRhythm, PIDController
 from .memory_cortex import MemoryCortex
@@ -35,23 +36,48 @@ from .model_utils import (
     ensure_embedding_model_dir
 )
 
-# 太一引擎相关（兼容保留）
-from .state_machine import ChapterNode, NarrativeState, extract_state, extract_semantic_state
-from .causality_judge import scan_conflicts, ConflictReport
-from .momentum_tracker import calculate_momentum, MomentumReport, PacingLevel
-from .semantic_field import (
-    vectorize_state,
-    StateVector,
-    calculate_potential_energy,
-    evolve,
-    inverse_collapse,
-    build_collapse_prompt,
+# 事件系统
+from .state_events import (
+    StateEventType,
+    StateEvent,
+    StateEventEmitter,
+    AsyncStateEventEmitter,
+    StateEventListener,
+    EventLogger,
+    EventFilter,
+    get_global_event_emitter,
+    get_global_async_emitter,
+    emit_global_event,
+    emit_global_async_event,
 )
-from .engine import TaiyiEngine
+
+# 自适应PID控制
+from .adaptive_pid import (
+    AdaptivePIDController,
+    PPOAgent,
+    create_adaptive_controller,
+    compute_control_output,
+)
+
+# 监控指标收集
+from .metrics_collector import (
+    MetricsCollector,
+    MetricsConfig,
+    get_metrics_collector,
+    init_metrics_collector,
+    record_response_time,
+    record_riemannian_calculation,
+    record_event_processing,
+    record_cache_operation,
+    record_llm_call_performance,
+)
+
+
 
 __all__ = [
     # 女娲内核
     "NuwaKernel",
+    "NuwaKernelAsync",  # 新增：导出异步内核名称
     "NuwaState",
     "BioRhythm",
     "PIDController",
@@ -59,27 +85,37 @@ __all__ = [
     "MemoryDreamer",
     "Personality",
     "SelfEvolutionState",
+    # 自适应PID控制
+    "AdaptivePIDController",
+    "PPOAgent",
+    "create_adaptive_controller",
+    "compute_control_output",
     # 模型工具
     "EMBEDDING_MODEL_NAME",
     "DEFAULT_EMBEDDING_DIR",
     "ensure_embedding_model_dir",
-    # 太一引擎（兼容保留）
-    "ChapterNode",
-    "NarrativeState",
-    "extract_state",
-    "extract_semantic_state",
-    "scan_conflicts",
-    "ConflictReport",
-    "calculate_momentum",
-    "MomentumReport",
-    "PacingLevel",
-    "TaiyiEngine",
-    # 语义场论
-    "vectorize_state",
-    "StateVector",
-    "calculate_potential_energy",
-    "evolve",
-    "inverse_collapse",
-    "build_collapse_prompt",
+    # 事件系统
+    "StateEventType",
+    "StateEvent",
+    "StateEventEmitter",
+    "AsyncStateEventEmitter",
+    "StateEventListener",
+    "EventLogger",
+    "EventFilter",
+    "get_global_event_emitter",
+    "get_global_async_emitter",
+    "emit_global_event",
+    "emit_global_async_event",
+    
+    # 监控指标
+    "MetricsCollector",
+    "MetricsConfig",
+    "get_metrics_collector",
+    "init_metrics_collector",
+    "record_response_time",
+    "record_riemannian_calculation",
+    "record_event_processing",
+    "record_cache_operation",
+    "record_llm_call_performance",
 ]
 
