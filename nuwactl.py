@@ -395,39 +395,27 @@ def start_service():
     import sys
     print_info("启动 Nuwa 核心服务...")
     try:
-        # 检查是否是 Windows 系统
-        if os.name == 'nt':
-            # Windows 系统：直接运行 main_async.py
-            print_info("在 Windows 系统上启动服务...")
-            # 直接在当前进程中执行服务，结束管理工具
-            print_info("正在切换到服务运行模式...")
-            # 使用 sys.executable 获取当前 Python 解释器路径
-            # 在 Windows 上，使用 os.system 来执行，因为 exec 系列函数在 Windows 上有兼容性问题
-            os.system(f"{sys.executable} main_async.py")
-            # 执行完成后退出管理工具
-            sys.exit(0)
-            return True
-        else:
-            # Linux 系统：使用 systemctl
-            if not is_root():
-                print_error("需要 root 权限才能启动系统服务")
-                return False
-            
-            # 重新加载 Systemd 配置
-            run_command("systemctl daemon-reload", check=True)
-
-            # 启用并启动服务
-            run_command("systemctl enable nuwa", check=True)
-            run_command("systemctl start nuwa", check=True)
-
-            # 检查服务状态
-            time.sleep(2)
-            result = run_command("systemctl status nuwa", capture_output=True)
-            if result:
-                print(result.stdout)
-
-            print_success("Nuwa 核心服务启动成功")
-            return True
+        # 检查依赖
+        print_info("检查依赖...")
+        try:
+            import yaml
+            print_info("✅ pyyaml 已安装")
+        except ImportError:
+            print_info("❌ pyyaml 未安装")
+        try:
+            import psutil
+            print_info("✅ psutil 已安装")
+        except ImportError:
+            print_info("❌ psutil 未安装")
+        
+        # 直接运行 main_async.py（与 Windows 保持一致）
+        print_info("在当前系统上启动服务...")
+        print_info("正在切换到服务运行模式...")
+        # 使用 sys.executable 获取当前 Python 解释器路径
+        os.system(f"{sys.executable} main_async.py")
+        # 执行完成后退出管理工具
+        sys.exit(0)
+        return True
     except Exception as e:
         print_error(f"启动 Nuwa 核心服务失败: {e}")
         return False
@@ -437,59 +425,30 @@ def stop_service():
     """
     停止 Nuwa 核心服务
     """
-    if not is_root():
-        print_error("需要 root 权限才能停止系统服务")
-        return False
-
     print_info("停止 Nuwa 核心服务...")
-    try:
-        run_command("systemctl stop nuwa", check=True)
-        print_success("Nuwa 核心服务停止成功")
-        return True
-    except Exception as e:
-        print_error(f"停止 Nuwa 核心服务失败: {e}")
-        return False
+    print_info("提示：由于服务是直接在终端运行的，您可以按 Ctrl+C 停止服务")
+    print_success("Nuwa 核心服务停止提示已显示")
+    return True
 
 
 def restart_service():
     """
     重启 Nuwa 核心服务
     """
-    if not is_root():
-        print_error("需要 root 权限才能重启系统服务")
-        return False
-
     print_info("重启 Nuwa 核心服务...")
-    try:
-        run_command("systemctl restart nuwa", check=True)
-        time.sleep(2)
-        result = run_command("systemctl status nuwa", capture_output=True)
-        if result:
-            print(result.stdout)
-        print_success("Nuwa 核心服务重启成功")
-        return True
-    except Exception as e:
-        print_error(f"重启 Nuwa 核心服务失败: {e}")
-        return False
+    print_info("提示：请先按 Ctrl+C 停止当前服务，然后重新运行 'python nuwactl.py start' 启动服务")
+    print_success("Nuwa 核心服务重启提示已显示")
+    return True
 
 
 def status_service():
     """
     检查 Nuwa 核心服务状态
     """
-    if not is_root():
-        print_error("需要 root 权限才能检查系统服务状态")
-        return False
-
     print_info("检查 Nuwa 核心服务状态...")
-    try:
-        result = run_command("systemctl status nuwa", capture_output=True)
-        if result:
-            print(result.stdout)
-        return True
-    except Exception as e:
-        print_error(f"检查 Nuwa 核心服务状态失败: {e}")
-        return False
+    print_info("提示：由于服务是直接在终端运行的，请查看终端状态或按 Ctrl+C 停止服务")
+    print_success("Nuwa 核心服务状态检查提示已显示")
+    return True
 
 
 def edit_config():
@@ -513,9 +472,9 @@ def upgrade_project():
     """
     print_info("升级项目到最新版本...")
 
-    # 停止服务
-    if is_root():
-        stop_service()
+    # 停止服务（提示用户手动停止）
+    print_info("提示：请先按 Ctrl+C 停止当前运行的服务，然后继续升级")
+    input("按回车键继续...")
 
     # 备份数据
     backup_dir = PROJECT_ROOT / f"backup_{time.strftime('%Y%m%d_%H%M%S')}"
@@ -547,8 +506,11 @@ def upgrade_project():
 
     # 更新依赖
     print_info("更新项目依赖...")
-    activate_script = VENV_PATH / "bin" / "activate"
-    pip_command = str(VENV_PATH / "bin" / "pip")
+    # 根据操作系统确定 pip 路径
+    if os.name == 'nt':  # Windows
+        pip_command = str(VENV_PATH / "Scripts" / "pip")
+    else:  # Linux/macOS
+        pip_command = str(VENV_PATH / "bin" / "pip")
     try:
         result = run_command(f"{pip_command} install -r requirements.txt", check=True)
         if result:
@@ -559,9 +521,8 @@ def upgrade_project():
         print_error(f"项目依赖更新失败: {e}")
         return False
 
-    # 启动服务
-    if is_root():
-        start_service()
+    # 启动服务（提示用户手动启动）
+    print_info("升级完成，请运行 'python nuwactl.py start' 启动服务")
 
     print_success("项目升级成功")
     return True
@@ -577,8 +538,11 @@ def run_tests():
         print_error("项目未初始化，请先运行 'init' 命令")
         return False
 
-    activate_script = VENV_PATH / "bin" / "activate"
-    pytest_command = str(VENV_PATH / "bin" / "pytest")
+    # 根据操作系统确定 pytest 路径
+    if os.name == 'nt':  # Windows
+        pytest_command = str(VENV_PATH / "Scripts" / "pytest")
+    else:  # Linux/macOS
+        pytest_command = str(VENV_PATH / "bin" / "pytest")
 
     try:
         result = run_command(f"{pytest_command} tests/", capture_output=True)
@@ -631,7 +595,11 @@ def dev_mode():
         print_info(f"安装缺失的开发依赖: {' '.join(missing_deps)}")
         try:
             if VENV_PATH.exists():
-                pip_command = str(VENV_PATH / "bin" / "pip")
+                # 根据操作系统确定 pip 路径
+                if os.name == 'nt':  # Windows
+                    pip_command = str(VENV_PATH / "Scripts" / "pip")
+                else:  # Linux/macOS
+                    pip_command = str(VENV_PATH / "bin" / "pip")
             else:
                 pip_command = "pip"
             
@@ -719,32 +687,20 @@ def health_check():
     except ImportError:
         checks.append(("OpenAI 依赖", False, "未安装"))
     
-    # 4. 检查服务状态（Windows 和 Linux 不同）
-    if os.name == 'nt':
-        # Windows 系统：检查进程
+    # 4. 检查服务状态（Windows 和 Linux 一致）
+    try:
         import psutil
-        try:
-            service_running = False
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-                try:
-                    if 'main_async.py' in ' '.join(proc.cmdline()):
-                        service_running = True
-                        break
-                except:
-                    pass
-            checks.append(("服务状态", service_running, "运行中" if service_running else "未运行"))
-        except ImportError:
-            checks.append(("服务状态", False, "无法检查（需要 psutil）"))
-    else:
-        # Linux 系统：使用 systemctl
-        if is_root():
-            result = run_command("systemctl status nuwa", check=False, capture_output=True)
-            if result and "active (running)" in result.stdout:
-                checks.append(("服务状态", True, "运行中"))
-            else:
-                checks.append(("服务状态", False, "未运行"))
-        else:
-            checks.append(("服务状态", False, "需要 root 权限检查"))
+        service_running = False
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if 'main_async.py' in ' '.join(proc.cmdline()):
+                    service_running = True
+                    break
+            except:
+                pass
+        checks.append(("服务状态", service_running, "运行中" if service_running else "未运行"))
+    except ImportError:
+        checks.append(("服务状态", False, "无法检查（需要 psutil）"))
     
     # 5. 检查端口
     try:

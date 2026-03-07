@@ -336,6 +336,24 @@ class NuwaKernelAsync:
         print("[OK] NuwaKernel 初始化完成")
         print("=" * 60)
     
+    def _init_agent_skills(self):
+        """初始化 AgentSkills"""
+        # 这里可以添加技能初始化逻辑
+        # 目前暂时为空实现
+        pass
+    
+    def start_heartbeat(self):
+        """启动心跳循环"""
+        # 这里可以添加心跳循环逻辑
+        # 目前暂时为空实现
+        pass
+    
+    def stop_heartbeat(self):
+        """停止心跳循环"""
+        # 这里可以添加心跳循环停止逻辑
+        # 目前暂时为空实现
+        pass
+    
     # ==================== TTS语音合成方法 ====================
     
     async def _get_tts_synthesizer(self):
