@@ -1146,17 +1146,85 @@ export LLM_MODEL_NAME="local-model"
 - **强化学习**：为自适应控制和自我进化提供优化方法
 - **记忆整理和语义检索算法**：为记忆系统提供支持
 
-### 技术与工具支持
+### 核心框架与库
 
-- **Trae AI & Cursor AI**：在项目快速开发过程中提供高效的 AI 辅助支持
+#### Python 科学计算栈
+- **NumPy**：数值计算基础
+- **SciPy**：科学计算和优化算法
+- **PyTorch**：深度学习框架，为语义向量计算提供支持
+
+#### NLP 与 Transformers
+- **Hugging Face Transformers**：提供强大的预训练模型支持
+- **Sentence-Transformers**：语义嵌入和相似度计算
 - **Google Gemini/Gemma**：基座模型支持
-- **Prometheus/Grafana**：监控可视化
+
+#### 异步 Web 框架
+- **FastAPI**：高性能异步 Web 框架
+- **Uvicorn**：ASGI 服务器
+- **Starlette**：轻量级 ASGI 框架
+- **WebSockets**：实时双向通信
+- **aiohttp**：异步 HTTP 客户端/服务器
+
+#### 配置与数据验证
+- **PyYAML**：配置文件解析
+- **Pydantic**：数据验证和设置管理
+- **Dependency Injector**：依赖注入框架
+
+#### 向量数据库
+- **LanceDB**：高性能向量数据库，用于记忆存储
+- **PyArrow**：数据处理和存储
+
+#### 监控与可观测性
+- **Prometheus**：指标收集和存储
+- **Grafana**：监控可视化面板
+- **psutil**：系统和进程监控
+
+#### 日志与调试
+- **structlog**：结构化日志
+- **colorama**：跨平台彩色终端输出
+
+#### 测试工具
+- **pytest**：测试框架
+- **pytest-cov**：测试覆盖率报告
+- **pytest-asyncio**：异步测试支持
+
+### 多模态处理
+
+- **OpenAI Whisper**：语音识别（STT）
+- **VITS**：文本转语音（TTS）
+- **CLIP**：图像理解和描述
+
+### 容器化与部署
+
 - **Docker**：容器化部署
-- **Whisper/VITS/CLIP**：语音和图像处理
+- **Docker Compose**：多容器编排
+- **Python 官方 Docker 镜像**：基础运行环境
+
+### AI 辅助开发工具
+
+- **Trae AI**：在项目快速开发过程中提供高效的 AI 辅助支持
+- **Cursor AI**：智能代码编辑和重构建议
+
+### 开发基础设施
+
+- **Git & GitHub**：版本控制和代码托管
+- **Python 3.11**：编程语言核心
+- **pip**：Python 包管理
+
+### 国内镜像源支持
+
+感谢以下镜像源提供的稳定服务，加速国内开发者的依赖安装：
+- **清华大学镜像源**：PyPI 镜像
+- **阿里云镜像源**：PyPI 镜像
+- **中国科学技术大学镜像源**：PyPI 镜像
+- **豆瓣 PyPI 镜像**：PyPI 镜像
 
 ### 开源社区
 
-感谢所有开源库和工具的贡献者！
+感谢所有为本项目提供灵感和支持的开源贡献者！特别感谢：
+- 所有上述库和框架的维护者和贡献者
+- AI 和安全研究社区的同行们
+- 为数字生命和 Agent 架构探索提供思路的研究者们
 
 ---
 
