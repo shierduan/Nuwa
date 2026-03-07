@@ -15,33 +15,41 @@ import time
 from datetime import datetime
 from difflib import SequenceMatcher
 
+# 延迟导入可选依赖，避免类型注解导致的导入错误
+NUMPY_AVAILABLE = False
+PYARROW_AVAILABLE = False
+LANCEDB_AVAILABLE = False
+EMBEDDING_AVAILABLE = False
+
+np = None
+pa = None
+lancedb = None
+SentenceTransformer = None
+
+# 尝试导入可选依赖
 try:
     import numpy as np
     NUMPY_AVAILABLE = True
 except ImportError:
-    np = None
-    NUMPY_AVAILABLE = False
+    pass
 
 try:
     import pyarrow as pa
     PYARROW_AVAILABLE = True
 except ImportError:
-    pa = None
-    PYARROW_AVAILABLE = False
+    pass
 
 try:
     import lancedb
     LANCEDB_AVAILABLE = True
 except ImportError:
-    lancedb = None
-    LANCEDB_AVAILABLE = False
+    pass
 
 try:
     from sentence_transformers import SentenceTransformer
     EMBEDDING_AVAILABLE = True
 except ImportError:
-    SentenceTransformer = None
-    EMBEDDING_AVAILABLE = False
+    pass
 
 from .model_utils import ensure_embedding_model_dir
 
@@ -81,16 +89,16 @@ class MemoryCortex:
         self.embedding_model = None
         self._init_embedding_model()
     
-    def _define_schema(self) -> Optional[pa.Schema]:
+    def _define_schema(self):
         """
         定义显式 Schema
-        
+
         Returns:
-            PyArrow Schema 对象
+            PyArrow Schema 对象或 None
         """
         if not PYARROW_AVAILABLE or pa is None:
             return None
-        
+
         return pa.schema([
             pa.field("id", pa.string()),
             pa.field("text", pa.string()),
@@ -106,11 +114,11 @@ class MemoryCortex:
     def _init_db(self):
         """初始化 LanceDB 数据库"""
         if not LANCEDB_AVAILABLE:
-            print("⚠️ LanceDB 不可用，记忆检索功能将受限")
+            print("[WARN] LanceDB 不可用，记忆检索功能将受限")
             return
         
         if not PYARROW_AVAILABLE:
-            print("⚠️ PyArrow 不可用，无法定义 Schema")
+            print("[WARN] PyArrow 不可用，无法定义 Schema")
             return
         
         try:
@@ -145,38 +153,38 @@ class MemoryCortex:
                     )
                     # 创建后立即删除这个空记录
                     # 注意：LanceDB 可能不支持直接删除，所以我们先创建空表，后续插入时覆盖
-                    print(f"📝 创建新的记忆表: {self.db_path}")
+                    print(f"[INFO] 创建新的记忆表: {self.db_path}")
                 else:
-                    print("⚠️ Schema 未定义，无法创建表")
+                    print("[WARN] Schema 未定义，无法创建表")
             else:
                 # 表已存在，尝试打开表
                 try:
                     self.table = self.db.open_table("memory")
                     if self.table:
                         if not self._schema_is_compatible(self.table.schema.names):
-                            print("⚠️ 检测到旧的记忆表结构，正在重建以支持 Memory Dreamer...")
+                            print("[WARN] 检测到旧的记忆表结构，正在重建以支持 Memory Dreamer...")
                             self.db.drop_table("memory")
                             self._create_empty_table()
                             self.table = self.db.open_table("memory")
                         else:
-                            print(f"✅ 已加载记忆表: {self.db_path}")
+                            print(f"[OK] 已加载记忆表: {self.db_path}")
                     else:
-                        print(f"⚠️ 表打开失败，尝试重新创建...")
+                        print(f"[WARN] 表打开失败，尝试重新创建...")
                         self._create_empty_table()
                         self.table = self.db.open_table("memory")
-                        print(f"✅ 已重新创建记忆表: {self.db_path}")
+                        print(f"[OK] 已重新创建记忆表: {self.db_path}")
                 except Exception as e:
-                    print(f"⚠️ 打开表失败: {e}，尝试重新创建...")
+                    print(f"[WARN] 打开表失败: {e}，尝试重新创建...")
                     try:
                         self.db.drop_table("memory")
                         self._create_empty_table()
                         self.table = self.db.open_table("memory")
-                        print(f"✅ 已重新创建记忆表: {self.db_path}")
+                        print(f"[OK] 已重新创建记忆表: {self.db_path}")
                     except Exception as e2:
-                        print(f"⚠️ 重新创建表也失败: {e2}")
+                        print(f"[WARN] 重新创建表也失败: {e2}")
                         self.table = None
         except Exception as e:
-            print(f"⚠️ 初始化 LanceDB 失败: {e}")
+            print(f"[WARN] 初始化 LanceDB 失败: {e}")
             import traceback
             traceback.print_exc()
             self.db = None
@@ -209,21 +217,21 @@ class MemoryCortex:
     def _init_embedding_model(self):
         """初始化 Embedding 模型"""
         if not EMBEDDING_AVAILABLE or SentenceTransformer is None:
-            print("⚠️ SentenceTransformer 不可用，无法生成向量")
+            print("[WARN] SentenceTransformer 不可用，无法生成向量")
             return
         
         try:
             # 获取模型路径
             model_path = ensure_embedding_model_dir(SentenceTransformer)
             if not model_path:
-                print("⚠️ 无法加载 Embedding 模型：缺少可用的本地目录，且自动下载失败。")
+                print("[WARN] 无法加载 Embedding 模型：缺少可用的本地目录，且自动下载失败。")
                 return
             
             # 加载模型
             self.embedding_model = SentenceTransformer(model_path, local_files_only=True)
-            print(f"✅ 已加载 Embedding 模型: {model_path}")
+            print(f"[OK] 已加载 Embedding 模型: {model_path}")
         except Exception as e:
-            print(f"⚠️ 初始化 Embedding 模型失败: {e}")
+            print(f"[WARN] 初始化 Embedding 模型失败: {e}")
             self.embedding_model = None
     
     def store_memory(self, text: str, metadata: Optional[Dict[str, Any]] = None, timestamp: Optional[datetime] = None):
@@ -242,11 +250,11 @@ class MemoryCortex:
             return
         
         if not self.embedding_model:
-            print("⚠️ Embedding 模型未加载，无法存储记忆")
+            print("[WARN] Embedding 模型未加载，无法存储记忆")
             return
         
         if not self.table:
-            print("⚠️ 记忆表未初始化，无法存储记忆")
+            print("[WARN] 记忆表未初始化，无法存储记忆")
             return
         
         try:
@@ -268,16 +276,21 @@ class MemoryCortex:
             # 格式化时间戳字符串：YYYY-MM-DD HH:MM:SS
             timestamp_str = memory_datetime.strftime('%Y-%m-%d %H:%M:%S')
             
-            # 关键：将时间戳融合到文本内容中（内在时间感知）
+            # 关键改进：时间戳不用于生成向量，避免污染语义空间
+            # 原因：时间戳中的数字和符号（如 [2026-03-06 02:21:00]）会在向量空间中产生噪声
+            #       导致相近时间的消息向量变得相似，而非基于语义相似
+            # 方案：仅使用纯文本内容生成 embedding，时间戳单独存储在 text 字段用于展示
+            
+            # 使用纯文本生成向量（不包含时间戳）
+            vector = self.embedding_model.encode(text, convert_to_numpy=True)
+            
+            # 存储时将时间戳融合到文本中（用于检索结果展示）
             # 格式：[YYYY-MM-DD HH:MM:SS] 文本内容
             fused_text = f"[{timestamp_str}] {text}"
             
-            # 使用融合后的文本生成向量（这样 embedding 也包含时间信息）
-            vector = self.embedding_model.encode(fused_text, convert_to_numpy=True)
-            
             # 确保向量维度正确
             if len(vector) != self.VECTOR_DIM:
-                print(f"⚠️ 向量维度不匹配: 期望 {self.VECTOR_DIM}，实际 {len(vector)}")
+                print(f"[WARN] 向量维度不匹配: 期望 {self.VECTOR_DIM}，实际 {len(vector)}")
                 return
             
             # 准备数据（确保符合 Schema）
@@ -323,9 +336,9 @@ class MemoryCortex:
 
             # 终端调试输出：向量写入（显示融合后的文本）
             preview = fused_text.replace("\n", " ")[:100]
-            print(f"✅ [Memory][WRITE] 已存储记忆 (id={memory_id}, time={timestamp_str}, importance={data['importance']:.2f}): {preview}...")
+            print(f"[OK] [Memory][WRITE] 已存储记忆 (id={memory_id}, time={timestamp_str}, importance={data['importance']:.2f}): {preview}...")
         except Exception as e:
-            print(f"⚠️ 存储记忆失败: {e}")
+            print(f"[WARN] 存储记忆失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -409,7 +422,7 @@ class MemoryCortex:
             建议在首次部署新版本时运行一次。
         """
         if not LANCEDB_AVAILABLE or self.table is None:
-            print("⚠️ LanceDB 不可用，无法执行迁移")
+            print("[WARN] LanceDB 不可用，无法执行迁移")
             return 0
         
         if default_timestamp is None:
@@ -419,7 +432,7 @@ class MemoryCortex:
             # 获取所有记忆
             df = self.table.to_pandas()
             if df.empty:
-                print("📝 没有记忆需要迁移")
+                print("[INFO] 没有记忆需要迁移")
                 return 0
             
             fixed_count = 0
@@ -447,45 +460,30 @@ class MemoryCortex:
                 # 格式化时间戳字符串
                 timestamp_str = memory_datetime.strftime('%Y-%m-%d %H:%M:%S')
                 
-                # 构建融合后的文本
+                # 构建融合后的文本（用于存储和展示）
                 fused_text = f"[{timestamp_str}] {text}"
                 
-                # 重新生成向量（使用融合后的文本）
+                # 关键改进：使用纯文本生成向量，避免时间戳污染语义空间
                 if self.embedding_model:
                     try:
-                        vector = self.embedding_model.encode(fused_text, convert_to_numpy=True)
+                        vector = self.embedding_model.encode(text, convert_to_numpy=True)
                         if len(vector) != self.VECTOR_DIM:
-                            print(f"⚠️ 记忆 {memory_id} 向量维度不匹配，跳过")
+                            print(f"[WARN] 记忆 {memory_id} 向量维度不匹配，跳过")
                             continue
                     except Exception as e:
-                        print(f"⚠️ 记忆 {memory_id} 向量生成失败: {e}，跳过")
+                        print(f"[WARN] 记忆 {memory_id} 向量生成失败：{e}，跳过")
                         continue
                 else:
-                    print(f"⚠️ Embedding 模型未加载，无法更新向量，跳过记忆 {memory_id}")
+                    print(f"[WARN] Embedding 模型未加载，无法更新向量，跳过记忆 {memory_id}")
                     continue
                 
                 # 准备更新数据
-                update_data = {
-                    "id": memory_id,
-                    "text": fused_text,
-                    "vector": vector.tolist(),
-                }
-                updates.append(update_data)
-                fixed_count += 1
-            
-            # 批量更新（如果 LanceDB 支持）
-            if updates and self.table:
-                # 注意：LanceDB 的更新操作可能需要先删除再插入
-                # 这里使用覆盖方式：删除旧记录，插入新记录
-                ids_to_update = [u["id"] for u in updates]
-                
-                # 删除旧记录
                 try:
                     # LanceDB 的删除操作
                     for memory_id in ids_to_update:
                         self.table.delete(f"id = '{memory_id}'")
                 except Exception as e:
-                    print(f"⚠️ 删除旧记录时出错: {e}")
+                    print(f"[WARN] 删除旧记录时出错: {e}")
                     # 如果删除失败，尝试直接插入（可能会产生重复，但至少数据会更新）
                 
                 # 插入更新后的记录
@@ -510,9 +508,9 @@ class MemoryCortex:
                         full_updates.append(full_data)
                     
                     self.table.add(full_updates)
-                    print(f"✅ 已迁移 {fixed_count} 条记忆，添加了时间戳前缀")
+                    print(f"[OK] 已迁移 {fixed_count} 条记忆，添加了时间戳前缀")
                 except Exception as e:
-                    print(f"⚠️ 插入更新后的记录时出错: {e}")
+                    print(f"[WARN] 插入更新后的记录时出错: {e}")
                     import traceback
                     traceback.print_exc()
                     return 0
@@ -520,7 +518,7 @@ class MemoryCortex:
             return fixed_count
             
         except Exception as e:
-            print(f"⚠️ 迁移过程中出错: {e}")
+            print(f"[WARN] 迁移过程中出错: {e}")
             import traceback
             traceback.print_exc()
             return 0
@@ -528,7 +526,7 @@ class MemoryCortex:
     def recall_by_emotion(
         self,
         query_text: str,
-        current_emotion_vector: Optional[np.ndarray] = None,
+        current_emotion_vector = None,
         top_k: int = 5,
         emotion_weight: float = 0.3,
     ) -> List[Dict[str, Any]]:
@@ -559,7 +557,7 @@ class MemoryCortex:
             return []
         
         if not self.embedding_model:
-            print("⚠️ Embedding 模型未加载，无法检索记忆")
+            print("[WARN] Embedding 模型未加载，无法检索记忆")
             return []
         
         try:
@@ -568,7 +566,7 @@ class MemoryCortex:
             
             # 确保向量维度正确
             if len(query_vector) != self.VECTOR_DIM:
-                print(f"⚠️ 查询向量维度不匹配: 期望 {self.VECTOR_DIM}，实际 {len(query_vector)}")
+                print(f"[WARN] 查询向量维度不匹配: 期望 {self.VECTOR_DIM}，实际 {len(query_vector)}")
                 return []
             
             # 2. 在 LanceDB 中检索语义相似的记忆
@@ -698,7 +696,7 @@ class MemoryCortex:
                 best = top[0]
                 preview = best["text"].replace("\n", " ")[:80]
                 print(
-                    f"🔍 [Memory][READ] query='{query_text[:40]}' "
+                    f"[SEARCH] [Memory][READ] query='{query_text[:40]}' "
                     f"-> {len(top)} 条，最高相似度={best['similarity']:.3f}，示例: {preview}..."
                 )
                 # 详细输出前3条记忆（用于调试）
@@ -710,11 +708,11 @@ class MemoryCortex:
                     timestamp_marker = "⏰" if has_timestamp else "  "
                     print(f"   {timestamp_marker} [{i}] 相似度={mem_sim:.3f}: {mem_text[:60]}...")
             else:
-                print(f"🔍 [Memory][READ] query='{query_text[:40]}' -> 未找到相关记忆")
+                print(f"[SEARCH] [Memory][READ] query='{query_text[:40]}' -> 未找到相关记忆")
 
             return top
         except Exception as e:
-            print(f"⚠️ 记忆检索失败: {e}")
+            print(f"[WARN] 记忆检索失败: {e}")
             import traceback
             traceback.print_exc()
             return []
@@ -767,7 +765,7 @@ class MemoryCortex:
             df = df.sort_values("timestamp", ascending=False).head(limit)
             return df.to_dict(orient="records")
         except Exception as e:
-            print(f"⚠️ 获取记忆失败: {e}")
+            print(f"[WARN] 获取记忆失败: {e}")
             return []
 
     def delete_memories(self, memory_ids: List[str]):
@@ -778,4 +776,4 @@ class MemoryCortex:
             try:
                 self.table.delete(where=f"id == '{mem_id}'")
             except Exception as e:
-                print(f"⚠️ 删除记忆 {mem_id} 失败: {e}")
+                print(f"[WARN] 删除记忆 {mem_id} 失败: {e}")
