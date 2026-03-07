@@ -1109,7 +1109,7 @@ export LLM_MODEL_NAME="local-model"
 - [x] Docker 容器化部署
 - [x] Prometheus + Grafana 监控
 - [x] 统一异步架构迁移
-- [x] 技能系统集成
+- [x] 双轨技能系统集成（AgentSkills + ClawHub）
 
 #### ⏳ 进行中
 
