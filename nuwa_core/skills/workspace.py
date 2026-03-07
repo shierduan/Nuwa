@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from .skill_types import SkillEntry, SkillCard, SkillSnapshot, SkillEligibilityContext
 from .frontmatter import parse_frontmatter, resolve_open_claw_metadata, resolve_skill_invocation_policy
 from .clawhub import search_skills, install_skill, uninstall_skill, list_skills, update_skill
