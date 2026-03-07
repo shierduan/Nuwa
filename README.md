@@ -165,6 +165,367 @@ result = await kernel.process_input("你好")
 
 ---
 
+## 🔌 技能机制
+
+女娲系统采用**双轨技能架构**，同时支持 **AgentSkills（原生技能）** 和 **ClawHub 技能**，实现能力的动态扩展与热插拔。
+
+### 1. 技能系统架构
+
+```
+SkillManager (技能管理器)
+├── AgentSkills (原生技能)
+│   ├── 基类：AgentSkill
+│   ├── WeatherSkill (天气查询)
+│   └── Custom Skills (自定义技能目录)
+│
+└── ClawHub Skills (第三方技能)
+    ├── ClawHub Manager (安装/卸载/更新)
+    ├── Skill Registry (技能注册表)
+    └── Skill Executor (技能执行器)
+```
+
+### 2. AgentSkills（原生技能）
+
+基于 Python 类实现的内置技能，具有完整的类型安全和性能优化。
+
+#### 2.1 技能基类
+
+所有原生技能都继承自 `AgentSkill` 抽象基类：
+
+```python
+from nuwa_core.skills.agent_skills import AgentSkill
+
+class WeatherSkill(AgentSkill):
+    def __init__(self):
+        super().__init__()
+        self.name = "WeatherSkill"
+        self.description = "查询天气信息"
+        self.keywords = ["天气", "温度", "晴", "雨", "雪", "预报"]
+    
+    async def execute(self, query: str, emotion_state: Dict[str, float], 
+                     memory_context: Dict[str, Any]) -> Dict[str, Any]:
+        # 执行技能逻辑
+        return self.format_response(
+            success=True,
+            result=weather_data,
+            emotion_update={"joy": 0.2},
+            memory_update=f"查询了{city}的天气",
+            message=message
+        )
+```
+
+#### 2.2 核心特性
+
+- **情绪感知**：技能执行时接收当前情绪状态，可反向影响情绪
+- **记忆上下文**：访问短期/长期记忆，实现有记忆的交互
+- **标准化输出**：统一返回格式，包含结果、情绪更新、记忆更新
+
+#### 2.3 开发自定义 AgentSkill
+
+```bash
+# 1. 在 skills 目录创建技能文件夹
+mkdir -p skills/my_custom_skill
+
+# 2. 创建__init__.py 文件
+touch skills/my_custom_skill/__init__.py
+
+# 3. 编写技能代码
+```
+
+```python
+# skills/my_custom_skill/__init__.py
+from nuwa_core.skills.agent_skills import AgentSkill
+
+class MyCustomSkill(AgentSkill):
+    def __init__(self):
+        super().__init__()
+        self.name = "MyCustomSkill"
+        self.description = "我的自定义技能描述"
+        self.keywords = ["关键词 1", "关键词 2"]
+    
+    async def execute(self, query: str, emotion_state: Dict[str, float], 
+                     memory_context: Dict[str, Any]) -> Dict[str, Any]:
+        # 实现你的技能逻辑
+        return self.format_response(
+            success=True,
+            result={"data": "结果数据"},
+            emotion_update={"joy": 0.1},
+            memory_update="技能执行记录",
+            message="向用户展示的消息"
+        )
+```
+
+### 3. ClawHub 技能（第三方技能）
+
+基于 OpenClaw 规范的插件化技能系统，支持从社区动态安装/卸载技能。
+
+#### 3.1 技能元数据
+
+每个 ClawHub 技能包含完整的元数据定义：
+
+```yaml
+# .claw/skill.yaml
+name: multi-search-engine
+version: 1.0.0
+description: 支持 17 个搜索引擎的多功能搜索工具
+author: Nuwa Team
+homepage: https://github.com/shierduan/Nuwa
+
+metadata:
+  skill_key: search
+  primary_env: python
+  emoji: 🔍
+  os: [linux, darwin, windows]
+  
+install:
+  - kind: pip
+    package: requests
+    module: requests
+    
+commands:
+  - name: search
+    description: 使用搜索引擎查询信息
+    dispatch:
+      kind: tool
+      tool_name: web_search
+```
+
+#### 3.2 技能管理命令
+
+```bash
+# 搜索技能
+skill_manager search "搜索"
+
+# 安装技能
+skill_manager install multi-search-engine
+
+# 卸载技能
+skill_manager uninstall multi-search-engine
+
+# 更新技能
+skill_manager update multi-search-engine
+
+# 列出已安装技能
+skill_manager list
+```
+
+#### 3.3 技能执行器
+
+为 ClawHub 技能注册专用执行器：
+
+```python
+# 在 SkillManager 中注册执行器
+def _register_skill_executors(self):
+    self.skill_executors['multi-search-engine'] = self._execute_multi_search_engine
+
+async def _execute_multi_search_engine(self, skill: Dict, query: str, 
+                                       emotion_state: Dict[str, float], 
+                                       memory_context: Dict[str, Any]) -> Dict[str, Any]:
+    # 解析 URL 或搜索关键词
+    urls = re.findall(url_pattern, query)
+    
+    if urls:
+        # 执行网页抓取
+        fetch_result = await web_fetch({'url': urls[0][2]})
+        return {
+            "success": True,
+            "result": {"page_info": fetch_result['data']},
+            "emotion_update": {"joy": 0.1, "anticipation": 0.1},
+            "memory_update": f"访问了 {urls[0][2]}",
+            "message": f"已访问该网站：{fetch_result['data'].get('title')}"
+        }
+    else:
+        # 执行搜索
+        search_result = await search_web(query, engine='google')
+        return {
+            "success": True,
+            "result": {"search_results": search_result['data']},
+            "emotion_update": {"anticipation": 0.15},
+            "memory_update": f"搜索了 '{query}'",
+            "message": f"搜索结果：{search_result['data'].get('title')}"
+        }
+```
+
+### 4. 技能调度机制
+
+#### 4.1 智能匹配算法
+
+技能管理器使用多层匹配策略：
+
+```python
+def find_skill(self, query: str) -> Optional[Any]:
+    query_lower = query.lower()
+    
+    # 1. 优先匹配 AgentSkills（关键词匹配）
+    for skill in self.agent_skills:
+        if skill.can_handle(query):
+            return skill
+    
+    # 2. 然后匹配 ClawHub 技能（多策略评分）
+    best_match = None
+    best_score = 0
+    
+    for skill in self.clawhub_skills:
+        score = 0
+        
+        # 精确匹配名称 (100 分)
+        if skill_name == query_lower:
+            score = 100
+        # 包含匹配 (80 分)
+        elif skill_name in query_lower:
+            score = 80
+        # 关键词匹配 (60 分)
+        elif matched_keywords:
+            score = (len(matched_keywords) / len(skill_keywords)) * 60
+        # 描述匹配 (40 分)
+        if description_match:
+            score = max(score, 40)
+        
+        # 特殊技能逻辑（如 find-skills, multi-search-engine）
+        if skill_name == 'multi-search-engine' and has_search_keywords:
+            score = max(score, 90)
+        
+        if score > best_score:
+            best_score = score
+            best_match = skill
+    
+    # 返回超过阈值的最佳匹配
+    return best_match if best_score >= 40 else None
+```
+
+#### 4.2 技能执行流程
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant Kernel as NuwaKernel
+    participant SM as SkillManager
+    participant Skill as 技能实例
+    participant Memory as 记忆皮层
+    
+    User->>Kernel: 输入请求
+    Kernel->>SM: find_skill(query)
+    SM->>SM: 匹配 AgentSkills
+    SM->>SM: 匹配 ClawHub 技能
+    SM-->>Kernel: 返回匹配技能
+    Kernel->>Memory: 获取记忆上下文
+    Memory-->>Kernel: 返回记忆上下文
+    Kernel->>Skill: execute(query, emotion, memory)
+    Skill->>Skill: 执行技能逻辑
+    Skill-->>Kernel: 返回执行结果
+    Kernel->>Kernel: 更新情绪状态
+    Kernel->>Kernel: 存储记忆
+    Kernel-->>User: 返回响应
+```
+
+### 5. 技能生命周期管理
+
+#### 5.1 加载机制
+
+```python
+class SkillManager:
+    def __init__(self, skills_dirs: List[str] = None):
+        # 默认技能目录
+        default_dirs = [
+            os.path.join(os.getcwd(), 'skills'),
+            os.path.join(os.getcwd(), 'data', 'nuwa', 'skills')
+        ]
+        self.skills_dirs = skills_dirs or default_dirs
+        
+        # 初始化 ClawHub 管理器
+        self.clawhub_manager = get_clawhub_manager(self.skills_dirs[0])
+        
+        # 加载所有技能
+        self._load_agent_skills()
+        self._load_clawhub_skills()
+        self._register_skill_executors()
+```
+
+#### 5.2 热插拔支持
+
+```python
+# 动态安装技能
+success = install_skill("multi-search-engine")
+if success:
+    # 自动重新加载技能列表
+    reload_skills()
+
+# 动态卸载技能
+success = uninstall_skill("weather-skill")
+
+# 更新技能到指定版本
+update_skill("multi-search-engine", version="2.0.0")
+```
+
+### 6. 技能与情感系统集成
+
+技能执行不仅返回结果，还会：
+
+- **更新情绪状态**：根据技能执行结果调整 13 维情感空间
+- **写入记忆**：将技能使用记录存入长期记忆
+- **影响后续行为**：情绪变化会影响 LLM 生成策略
+
+```python
+# 技能执行返回值示例
+{
+    "success": True,
+    "result": {"temperature": 22, "condition": "晴"},
+    "emotion_update": {"joy": 0.2},  # 晴天增加快乐值
+    "memory_update": "查询了北京的天气，当前温度 22°C，天气晴",
+    "message": "北京当前天气：晴，温度 22°C..."
+}
+```
+
+### 7. 技能目录结构
+
+```
+Nuwa/
+├── nuwa_core/skills/           # 核心技能模块
+│   ├── skill_manager.py        # 技能管理器
+│   ├── agent_skills.py         # AgentSkill 基类
+│   ├── clawhub.py              # ClawHub 集成
+│   ├── skill_types.py          # 技能类型定义
+│   ├── workspace.py            # 工作区技能规范
+│   ├── frontmatter.py          # YAML Frontmatter 解析
+│   ├── weather_skill.py         # 天气技能示例
+│   ├── web_fetch.py            # 网页抓取工具
+│   │
+│   └── custom/                 # 自定义技能目录（动态加载）
+│       └── my_skill/
+│           └── __init__.py
+│
+├── skills/                     # 用户技能目录 1
+│   └── custom_skill/
+│       └── __init__.py
+│
+└── data/nuwa/skills/           # 用户技能目录 2
+    └── another_skill/
+        └── __init__.py
+```
+
+### 8. 技能开发最佳实践
+
+#### 8.1 设计原则
+
+- **单一职责**：每个技能只负责一个明确的功能
+- **情绪友好**：合理设计情绪更新，增强拟人化体验
+- **记忆意识**：重要操作应写入记忆，形成连续体验
+- **错误处理**：优雅处理失败场景，提供有意义的错误信息
+
+#### 8.2 性能优化
+
+- **异步执行**：所有技能使用 `async/await` 避免阻塞主线程
+- **缓存策略**：重复查询使用缓存减少外部 API 调用
+- **超时控制**：外部调用设置合理超时时间
+
+#### 8.3 安全考虑
+
+- **输入验证**：严格校验用户输入，防止注入攻击
+- **权限控制**：敏感操作需要用户确认
+- **资源限制**：限制技能执行的资源消耗
+
+---
+
 ## 🏗️ 技术架构
 
 ### 架构图
@@ -242,11 +603,16 @@ Nuwa/
 │   ├── metrics_collector.py    # 监控指标收集器
 │   ├── sync_compat.py          # 同步兼容层
 │   │
-│   ├── skills/                 # 技能系统
-│   │   ├── skill_manager.py    # 技能管理器
-│   │   ├── weather_skill.py     # 天气技能
-│   │   ├── web_fetch.py        # 网页抓取技能
-│   │   └── ...
+│   ├── skills/                 # 技能系统 (双轨架构)
+│   │   ├── skill_manager.py    # 技能管理器 (491 行)
+│   │   ├── agent_skills.py     # AgentSkill 基类 (104 行)
+│   │   ├── clawhub.py          # ClawHub 集成 (约 300 行)
+│   │   ├── skill_types.py      # 技能类型定义 (140 行)
+│   │   ├── workspace.py        # 工作区技能规范 (约 900 行)
+│   │   ├── frontmatter.py      # YAML Frontmatter 解析 (约 130 行)
+│   │   ├── weather_skill.py     # 天气技能示例 (188 行)
+│   │   ├── web_fetch.py        # 网页抓取工具 (约 120 行)
+│   │   └── custom/             # 自定义技能目录（动态加载）
 │   │
 │   └── chat_channels/          # 聊天渠道
 │       ├── feishu_channel.py   # 飞书渠道
