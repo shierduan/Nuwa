@@ -110,7 +110,7 @@ class NuwaConfig:
         """从文件加载配置（支持YAML/JSON）"""
         path = Path(file_path)
         if not path.exists():
-            print(f"⚠️ 配置文件不存在: {file_path}，使用默认配置")
+            print(f"[WARN] 配置文件不存在: {file_path}，使用默认配置")
             return cls()
         
         with open(path, 'r', encoding='utf-8') as f:
@@ -127,7 +127,7 @@ class NuwaConfig:
                     try:
                         data = json.loads(content)
                     except:
-                        print(f"⚠️ 无法解析配置文件: {file_path}，使用默认配置")
+                        print(f"[WARN] 无法解析配置文件: {file_path}，使用默认配置")
                         return cls()
         
         return cls.from_dict(data or {})
@@ -179,7 +179,7 @@ class NuwaConfig:
             if hasattr(self, key):
                 setattr(self, key, value)
             else:
-                print(f"⚠️ 未知配置项: {key}")
+                print(f"[WARN] 未知配置项: {key}")
     
     def get(self, key: str, default=None):
         """获取配置项"""
@@ -267,7 +267,7 @@ class ConfigManager:
         """从文件加载（自动检测格式）"""
         path = Path(file_path)
         if not path.exists():
-            print(f"⚠️ 配置文件不存在: {file_path}")
+            print(f"[WARN] 配置文件不存在: {file_path}")
             return
         
         if path.suffix.lower() in ['.yaml', '.yml']:
@@ -275,7 +275,7 @@ class ConfigManager:
         elif path.suffix.lower() == '.json':
             loader = JSONConfigLoader(file_path)
         else:
-            print(f"⚠️ 不支持的配置文件格式: {path.suffix}")
+            print(f"[WARN] 不支持的配置文件格式: {path.suffix}")
             return
         
         self.add_loader(loader)
@@ -297,7 +297,7 @@ class ConfigManager:
                 loaded = loader.load()
                 merged_data.update(loaded)
             except Exception as e:
-                print(f"⚠️ 配置加载失败: {e}")
+                print(f"[WARN] 配置加载失败: {e}")
         
         # 更新配置对象
         self.config = NuwaConfig.from_dict(merged_data)

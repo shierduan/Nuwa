@@ -426,7 +426,7 @@ class CacheManager:
         elif cache_type == 'state':
             return self.get_state_snapshot(key)
         else:
-            print(f"⚠️  未知的缓存类型: {cache_type}")
+            print(f"[WARN]  未知的缓存类型: {cache_type}")
             return None
     
     def set(self, cache_type: str, key: str, value: Any) -> bool:
@@ -450,12 +450,12 @@ class CacheManager:
             elif cache_type == 'state':
                 self.set_state_snapshot(key, value)
             else:
-                print(f"⚠️  未知的缓存类型: {cache_type}")
+                print(f"[WARN]  未知的缓存类型: {cache_type}")
                 return False
             
             return True
         except Exception as e:
-            print(f"⚠️  设置缓存失败: {e}")
+            print(f"[WARN]  设置缓存失败: {e}")
             return False
     
     def clear_all(self):

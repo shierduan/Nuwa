@@ -429,7 +429,7 @@ class GraphBasedMemory:
         # 缓存最近的查询结果
         self.query_cache = {}
         
-        print("✅ GraphBasedMemory 初始化完成")
+        print("[OK] GraphBasedMemory 初始化完成")
     
     def initialize_graph(self, memories: List[Dict[str, Any]]):
         """
@@ -439,7 +439,7 @@ class GraphBasedMemory:
             memories: 从 MemoryCortex 获取的记忆列表
         """
         if not NETWORKX_AVAILABLE:
-            print("⚠️ networkx 不可用，无法使用图记忆功能")
+            print("[WARN] networkx 不可用，无法使用图记忆功能")
             return
         
         self.memory_graph = MemoryGraph()
@@ -449,7 +449,7 @@ class GraphBasedMemory:
         self.save_graph()
         
         stats = self.memory_graph.get_graph_stats()
-        print(f"✅ 记忆图已构建: {stats['node_count']} 节点, {stats['edge_count']} 边, {stats['communities']} 社区")
+        print(f"[OK] 记忆图已构建: {stats['node_count']} 节点, {stats['edge_count']} 边, {stats['communities']} 社区")
     
     def update_graph(self, new_memory: Dict[str, Any]):
         """
@@ -707,9 +707,9 @@ class GraphBasedMemory:
             with open(self.graph_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
-            print(f"✅ 记忆图已保存: {self.graph_file}")
+            print(f"[OK] 记忆图已保存: {self.graph_file}")
         except Exception as e:
-            print(f"⚠️ 保存记忆图失败: {e}")
+            print(f"[WARN] 保存记忆图失败: {e}")
     
     def load_graph(self):
         """从磁盘加载图"""
@@ -717,7 +717,7 @@ class GraphBasedMemory:
             return
         
         if not os.path.exists(self.graph_file):
-            print(f"⚠️ 记忆图文件不存在: {self.graph_file}")
+            print(f"[WARN] 记忆图文件不存在: {self.graph_file}")
             return
         
         try:
@@ -744,9 +744,9 @@ class GraphBasedMemory:
                 self.memory_graph.add_edge(edge)
             
             stats = data.get("metadata", {}).get("stats", {})
-            print(f"✅ 记忆图已加载: {stats.get('node_count', 0)} 节点, {stats.get('edge_count', 0)} 边")
+            print(f"[OK] 记忆图已加载: {stats.get('node_count', 0)} 节点, {stats.get('edge_count', 0)} 边")
         except Exception as e:
-            print(f"⚠️ 加载记忆图失败: {e}")
+            print(f"[WARN] 加载记忆图失败: {e}")
             self.memory_graph = None
     
     def enable_gnn(self, gnn_model_path: Optional[str] = None):
@@ -756,7 +756,7 @@ class GraphBasedMemory:
         未来可以集成PyG或DGL等图神经网络库
         """
         self.gnn_enabled = True
-        print("⚠️ GNN增强功能预留接口，需要额外依赖库")
+        print("[WARN] GNN增强功能预留接口，需要额外依赖库")
 
 
 class GraphMemoryIntegration:
@@ -983,7 +983,7 @@ async def demo_graph_memory():
     print(f"   社区数: {insights['communities']}")
     print(f"   中心节点: {len(insights.get('central_nodes', []))} 个")
     
-    print("\n✅ 演示完成")
+    print("\n[OK] 演示完成")
 
 
 if __name__ == "__main__":

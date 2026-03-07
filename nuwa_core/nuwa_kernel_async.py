@@ -40,6 +40,7 @@ except ImportError:
 from .nuwa_state import NuwaState
 from .drive_system import BioRhythm
 from .memory_cortex import MemoryCortex
+from .memory_graph import GraphEnhancedMemoryCortex
 from .riemannian_semantic_field import (
     vectorize_state,
     StateVector,
@@ -221,8 +222,8 @@ class NuwaKernelAsync:
         # 2. 生物节律系统
         self.drive_system = BioRhythm(self.state)
         
-        # 3. 记忆皮层
-        self.memory_cortex = MemoryCortex(project_name=project_name, data_dir=data_dir)
+        # 3. 记忆皮层（图增强版本）
+        self.memory_cortex = GraphEnhancedMemoryCortex(project_name=project_name, data_dir=data_dir)
         
         # 4. 缓存管理器
         self.enable_cache = enable_cache

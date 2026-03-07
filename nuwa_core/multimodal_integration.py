@@ -65,12 +65,12 @@ class MultimodalKernel(KernelDI):
         if self.container:
             self.container.register("multimodal_kernel", self)
         
-        print("✅ MultimodalKernel 初始化完成")
+        print("[OK] MultimodalKernel 初始化完成")
     
     def _init_multimodal_processor(self):
         """初始化多模态处理器"""
         if not self.multimodal_enabled:
-            print("⚠️ 多模态功能已禁用")
+            print("[WARN] 多模态功能已禁用")
             return
         
         print("=" * 60)
@@ -88,7 +88,7 @@ class MultimodalKernel(KernelDI):
         available = sum(status.values())
         total = len(status)
         
-        print(f"✅ 多模态处理器就绪: {available}/{total}")
+        print(f"[OK] 多模态处理器就绪: {available}/{total}")
         print("=" * 60)
     
     @property
@@ -140,14 +140,14 @@ class MultimodalKernel(KernelDI):
         print("🎤 正在识别语音...")
         transcribed_text = await self.multimodal_processor.process_audio(audio, **kwargs)
         
-        if transcribed_text.startswith("⚠️"):
+        if transcribed_text.startswith("[WARN]"):
             return {
                 "error": transcribed_text,
                 "reply": "抱歉，语音识别失败。",
                 "transcribed_text": transcribed_text,
             }
         
-        print(f"✅ 识别结果: {transcribed_text}")
+        print(f"[OK] 识别结果: {transcribed_text}")
         
         # 2. 保存到记忆（带类型标记）
         await self._store_multimodal_memory(
@@ -202,14 +202,14 @@ class MultimodalKernel(KernelDI):
         print("🖼️ 正在理解图像...")
         image_desc = await self.multimodal_processor.process_image(image, **kwargs)
         
-        if image_desc.startswith("⚠️"):
+        if image_desc.startswith("[WARN]"):
             return {
                 "error": image_desc,
                 "reply": "抱歉，图像理解失败。",
                 "image_desc": image_desc,
             }
         
-        print(f"✅ 图像描述: {image_desc}")
+        print(f"[OK] 图像描述: {image_desc}")
         
         # 2. 保存到记忆
         await self._store_multimodal_memory(
@@ -272,7 +272,7 @@ class MultimodalKernel(KernelDI):
         # 处理音频
         if audio:
             audio_text = await self.multimodal_processor.process_audio(audio)
-            if not audio_text.startswith("⚠️"):
+            if not audio_text.startswith("[WARN]"):
                 combined_input.append(f"[语音]: {audio_text}")
                 input_types.append("audio")
                 await self._store_multimodal_memory(
@@ -284,7 +284,7 @@ class MultimodalKernel(KernelDI):
         # 处理图像
         if image:
             image_desc = await self.multimodal_processor.process_image(image)
-            if not image_desc.startswith("⚠️"):
+            if not image_desc.startswith("[WARN]"):
                 combined_input.append(f"[图像]: {image_desc}")
                 input_types.append("image")
                 await self._store_multimodal_memory(
@@ -348,10 +348,10 @@ class MultimodalKernel(KernelDI):
                 metadata=full_metadata
             )
             
-            print(f"✅ 已存储 {memory_type} 记忆: {content[:50]}...")
+            print(f"[OK] 已存储 {memory_type} 记忆: {content[:50]}...")
             
         except Exception as e:
-            print(f"⚠️ 存储记忆失败: {e}")
+            print(f"[WARN] 存储记忆失败: {e}")
     
     async def _synthesize_response(self, text: str) -> Optional[bytes]:
         """合成语音响应"""
@@ -363,14 +363,14 @@ class MultimodalKernel(KernelDI):
             audio_bytes = await self.multimodal_processor.synthesize_speech(text)
             
             if isinstance(audio_bytes, bytes) and len(audio_bytes) > 0:
-                print(f"✅ 语音合成完成: {len(audio_bytes)} 字节")
+                print(f"[OK] 语音合成完成: {len(audio_bytes)} 字节")
                 return audio_bytes
             else:
-                print("⚠️ 语音合成返回无效数据")
+                print("[WARN] 语音合成返回无效数据")
                 return None
                 
         except Exception as e:
-            print(f"⚠️ 语音合成失败: {e}")
+            print(f"[WARN] 语音合成失败: {e}")
             return None
     
     async def voice_chat(

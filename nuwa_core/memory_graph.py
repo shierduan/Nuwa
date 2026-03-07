@@ -88,7 +88,7 @@ class MemoryGraph:
         # 加载或初始化
         self._load_graph()
         
-        print(f"✅ MemoryGraph 初始化完成: {self.graph_path}")
+        print(f"[OK] MemoryGraph 初始化完成: {self.graph_path}")
         if self.graph:
             print(f"   - 节点数: {self.graph.number_of_nodes()}")
             print(f"   - 边数: {self.graph.number_of_edges()}")
@@ -96,7 +96,7 @@ class MemoryGraph:
     def _load_graph(self):
         """从文件加载图结构"""
         if not NETWORKX_AVAILABLE:
-            print("⚠️ NetworkX 不可用，图功能受限")
+            print("[WARN] NetworkX 不可用，图功能受限")
             return
         
         if os.path.exists(self.graph_path):
@@ -106,9 +106,9 @@ class MemoryGraph:
                     # 从 JSON 重建图
                     self.graph = nx.node_link_graph(data)
                     self.stats = data.get("stats", self.stats)
-                    print(f"✅ 已加载记忆图: {len(self.graph.nodes)} 个节点")
+                    print(f"[OK] 已加载记忆图: {len(self.graph.nodes)} 个节点")
             except Exception as e:
-                print(f"⚠️ 加载记忆图失败: {e}，将创建新图")
+                print(f"[WARN] 加载记忆图失败: {e}，将创建新图")
                 self.graph = nx.Graph()
         else:
             self.graph = nx.Graph()
@@ -134,9 +134,9 @@ class MemoryGraph:
             with open(self.graph_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
-            print(f"✅ 记忆图已保存: {self.graph_path}")
+            print(f"[OK] 记忆图已保存: {self.graph_path}")
         except Exception as e:
-            print(f"⚠️ 保存记忆图失败: {e}")
+            print(f"[WARN] 保存记忆图失败: {e}")
     
     def set_core_vector(self, core_vector: Any):
         """设置核心向量（用于关联强度计算）"""
@@ -223,7 +223,7 @@ class MemoryGraph:
             return True
             
         except Exception as e:
-            print(f"⚠️ 添加记忆节点失败: {e}")
+            print(f"[WARN] 添加记忆节点失败: {e}")
             return False
     
     def _build_associations(self, new_memory_id: str, new_vector: Any):
@@ -263,10 +263,10 @@ class MemoryGraph:
                     added_edges += 1
             
             if added_edges > 0:
-                print(f"🔗 为记忆 {new_memory_id} 构建了 {added_edges} 条关联边")
+                print(f"[LINK] 为记忆 {new_memory_id} 构建了 {added_edges} 条关联边")
             
         except Exception as e:
-            print(f"⚠️ 构建关联失败: {e}")
+            print(f"[WARN] 构建关联失败: {e}")
     
     def get_memory_trajectory(self, memory_id: str) -> List[Dict[str, Any]]:
         """
@@ -331,7 +331,7 @@ class MemoryGraph:
             return []
             
         except Exception as e:
-            print(f"⚠️ 获取演化轨迹失败: {e}")
+            print(f"[WARN] 获取演化轨迹失败: {e}")
             return []
     
     def find_communities(self) -> List[Dict[str, Any]]:
@@ -398,7 +398,7 @@ class MemoryGraph:
             return community_info
             
         except Exception as e:
-            print(f"⚠️ 社区发现失败: {e}")
+            print(f"[WARN] 社区发现失败: {e}")
             return []
     
     def query_similar_memories(self, query_vector: Any, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -452,7 +452,7 @@ class MemoryGraph:
             return similarities[:top_k]
             
         except Exception as e:
-            print(f"⚠️ 图查询失败: {e}")
+            print(f"[WARN] 图查询失败: {e}")
             return []
     
     def get_statistics(self) -> Dict[str, Any]:
@@ -511,7 +511,7 @@ class GraphEnhancedMemoryCortex:
         if hasattr(self.memory_cortex, '_core_vector') and self.memory_cortex._core_vector is not None:
             self.memory_graph.set_core_vector(self.memory_cortex._core_vector)
         
-        print("✅ GraphEnhancedMemoryCortex 初始化完成")
+        print("[OK] GraphEnhancedMemoryCortex 初始化完成")
     
     def store_memory(self, text: str, metadata: Optional[Dict[str, Any]] = None, 
                     timestamp: Optional[datetime] = None) -> bool:
@@ -648,6 +648,35 @@ class GraphEnhancedMemoryCortex:
         }
         return stats
     
+    def get_recent_memories(self, limit: int = 100, memory_type: str = "raw") -> List[Dict[str, Any]]:
+        """
+        获取最近的记忆（委托给底层 MemoryCortex）
+        
+        Args:
+            limit: 数量限制
+            memory_type: 记忆类型
+        
+        Returns:
+            记忆列表
+        """
+        if hasattr(self.memory_cortex, 'get_recent_memories'):
+            return self.memory_cortex.get_recent_memories(limit, memory_type)
+        return []
+    
+    def delete_memories(self, ids: List[str]) -> bool:
+        """
+        删除记忆（委托给底层 MemoryCortex）
+        
+        Args:
+            ids: 要删除的记忆 ID 列表
+        
+        Returns:
+            是否成功
+        """
+        if hasattr(self.memory_cortex, 'delete_memories'):
+            return self.memory_cortex.delete_memories(ids)
+        return False
+    
     def save(self):
         """保存所有数据"""
         self.memory_graph.save_graph()
@@ -671,9 +700,9 @@ class SimpleGNN:
             import torch
             self.torch = torch
             self.is_initialized = True
-            print("✅ SimpleGNN: PyTorch 可用")
+            print("[OK] SimpleGNN: PyTorch 可用")
         except ImportError:
-            print("⚠️ SimpleGNN: PyTorch 不可用，使用纯NumPy实现")
+            print("[WARN] SimpleGNN: PyTorch 不可用，使用纯NumPy实现")
             self.torch = None
     
     def aggregate_neighbors(self, node_vector: np.ndarray, neighbor_vectors: List[np.ndarray], 

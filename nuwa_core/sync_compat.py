@@ -125,12 +125,12 @@ class AsyncLLMClient:
                 api_key=api_key,
             )
             self.model_name = model_name
-            print(f"✅ 异步LLM客户端已初始化: {base_url}")
+            print(f"[OK] 异步LLM客户端已初始化: {base_url}")
         except ImportError:
-            print("⚠️ OpenAI SDK 不可用，LLM功能受限")
+            print("[WARN] OpenAI SDK 不可用，LLM功能受限")
             self.client = None
         except Exception as e:
-            print(f"⚠️ 异步客户端初始化失败: {e}")
+            print(f"[WARN] 异步客户端初始化失败: {e}")
             self.client = None
     
     async def chat_completions_create(

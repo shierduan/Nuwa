@@ -152,7 +152,7 @@ class StateEventEmitter:
             try:
                 listener(event)
             except Exception as e:
-                print(f"⚠️ 事件监听器执行失败: {e}")
+                print(f"[WARN] 事件监听器执行失败: {e}")
     
     def emit_async(self, event: StateEvent):
         """
@@ -239,7 +239,7 @@ class AsyncStateEventEmitter(StateEventEmitter):
                     loop = asyncio.get_event_loop()
                     await loop.run_in_executor(None, listener, event)
             except Exception as e:
-                print(f"⚠️ 异步事件监听器执行失败: {e}")
+                print(f"[WARN] 异步事件监听器执行失败: {e}")
 
 
 class EventLogger(StateEventListener):

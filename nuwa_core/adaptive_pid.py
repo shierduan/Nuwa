@@ -602,4 +602,4 @@ def demo_adaptive_pid():
     print(f"  总调整次数: {final_status['adaptations']}")
     print(f"  RL代理统计: {final_status['rl_agent']}")
     
-    print("\n✅ 自适应PID控制器演示完成")
+    print("\n[OK] 自适应PID控制器演示完成")

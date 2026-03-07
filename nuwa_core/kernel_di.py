@@ -131,7 +131,7 @@ class KernelDI:
         # 交互历史记录阈值（达到一定数量触发进化）
         self.evolution_threshold = 20
         
-        print("✅ KernelDI 初始化完成")
+        print("[OK] KernelDI 初始化完成")
         print("=" * 60)
     
     def _auto_init_dependencies(self):
@@ -141,7 +141,7 @@ class KernelDI:
         if self.state_manager is None:
             # 使用默认实现
             self.state_manager = DefaultStateManager(self.config)
-            print("✅ 自动初始化: DefaultStateManager")
+            print("[OK] 自动初始化: DefaultStateManager")
         
         # 2. 记忆皮层
         if self.memory_cortex is None:
@@ -150,14 +150,14 @@ class KernelDI:
                 project_name=self.config.project_name,
                 data_dir=self.config.data_dir
             )
-            print("✅ 自动初始化: MemoryCortex")
+            print("[OK] 自动初始化: MemoryCortex")
         
         # 3. 驱动力系统
         if self.drive_system is None:
             from .drive_system import BioRhythm
             state = self.state_manager.get_state()
             self.drive_system = BioRhythm(state)
-            print("✅ 自动初始化: BioRhythm")
+            print("[OK] 自动初始化: BioRhythm")
         
         # 4. LLM客户端
         if self.llm_client is None:
@@ -167,7 +167,7 @@ class KernelDI:
                 api_key=self.config.llm_api_key,
                 model_name=self.config.llm_model_name
             )
-            print("✅ 自动初始化: AsyncLLMClient")
+            print("[OK] 自动初始化: AsyncLLMClient")
         
         # 5. 自我进化模块
         if self.self_evolution is None:
@@ -177,7 +177,7 @@ class KernelDI:
                 memory_cortex=self.memory_cortex,
                 llm_client=self.llm_client
             )
-            print("✅ 自动初始化: SelfEvolutionRL")
+            print("[OK] 自动初始化: SelfEvolutionRL")
         
         # 6. 初始化核心向量
         self._init_core_vector()
@@ -193,11 +193,11 @@ class KernelDI:
             state_vec = vectorize_state(persona_text)
             if state_vec is not None and state_vec.vector is not None:
                 self._core_vector = state_vec.vector
-                print("✅ 核心人格向量已初始化")
+                print("[OK] 核心人格向量已初始化")
             else:
-                print("⚠️ 核心人格向量初始化失败")
+                print("[WARN] 核心人格向量初始化失败")
         except Exception as e:
-            print(f"⚠️ 初始化核心人格向量失败: {e}")
+            print(f"[WARN] 初始化核心人格向量失败: {e}")
             self._core_vector = None
     
     def _register_to_container(self):
@@ -211,7 +211,7 @@ class KernelDI:
         self.container.register("cache_manager", self.cache_manager)
         self.container.register("state_history", self.state_history_manager)
         self.container.register("kernel", self)
-        print("✅ 所有服务已注册到依赖注入容器")
+        print("[OK] 所有服务已注册到依赖注入容器")
     
     # ==================== 核心处理方法 ====================
     
@@ -353,7 +353,7 @@ class KernelDI:
             self.interaction_history = self.interaction_history[-max_history:]
         
         if self.config.enable_debug_mode:
-            print(f"📝 记录交互: 满意度={user_satisfaction:.2f}, 质量={quality_score:.2f}, 稳定性={emotional_stability:.2f}")
+            print(f"[INFO] 记录交互: 满意度={user_satisfaction:.2f}, 质量={quality_score:.2f}, 稳定性={emotional_stability:.2f}")
         
         return interaction
     
@@ -399,7 +399,7 @@ class KernelDI:
                 "result": result,
             }
         except Exception as e:
-            print(f"⚠️ 自我进化失败: {e}")
+            print(f"[WARN] 自我进化失败: {e}")
             return {"evolved": False, "error": str(e)}
     
     async def _retrieve_memories(self, user_input: str, system_instruction: Optional[str]) -> List[Dict]:
@@ -416,7 +416,7 @@ class KernelDI:
         cached = self.cache_manager.get_memory(query_hash)
         if cached is not None:
             if self.config.enable_debug_mode:
-                print(f"💾 使用缓存记忆 (hash={query_hash[:8]}...)")
+                print(f"[SAVE] 使用缓存记忆 (hash={query_hash[:8]}...)")
             return cached
         
         # 执行检索
@@ -524,7 +524,7 @@ class KernelDI:
                 if self.config.enable_debug_mode:
                     import hashlib
                     short_hash = hashlib.md5(str(messages).encode()).hexdigest()[:8]
-                    print(f"💾 使用缓存响应 (hash={short_hash}...)")
+                    print(f"[SAVE] 使用缓存响应 (hash={short_hash}...)")
                 return cached
         
         # 调用LLM
@@ -547,7 +547,7 @@ class KernelDI:
             
             return response_text
         except Exception as e:
-            print(f"⚠️ LLM调用失败: {e}")
+            print(f"[WARN] LLM调用失败: {e}")
             return None
     
     def _parse_response(self, response_text: str) -> Tuple[str, str, Optional[Dict]]:
@@ -648,7 +648,7 @@ class KernelDI:
             
         except Exception as e:
             if self.config.enable_debug_mode:
-                print(f"⚠️ 语义场演化分析失败: {e}")
+                print(f"[WARN] 语义场演化分析失败: {e}")
             return {}
     
     def _auto_save_state(self):
@@ -686,7 +686,7 @@ class KernelDI:
                 
             except Exception as e:
                 if self.config.enable_debug_mode:
-                    print(f"⚠️ 心跳循环错误: {e}")
+                    print(f"[WARN] 心跳循环错误: {e}")
                 await asyncio.sleep(1.0)
     
     async def _check_active_dialogue_trigger(self, current_time: float):
@@ -707,7 +707,7 @@ class KernelDI:
                         self._last_active_dialogue_time = current_time
                     except Exception as e:
                         if self.config.enable_debug_mode:
-                            print(f"⚠️ 主动对话生成失败: {e}")
+                            print(f"[WARN] 主动对话生成失败: {e}")
     
     async def initiate_active_dialogue(self) -> Optional[str]:
         """主动发起对话"""
@@ -827,7 +827,7 @@ class KernelDI:
         if self.cache_manager:
             self.cache_manager.clear_all()
         else:
-            print("⚠️ 缓存未启用")
+            print("[WARN] 缓存未启用")
     
     def optimize_memory(self):
         """执行内存优化"""
@@ -840,7 +840,7 @@ class KernelDI:
         # 检查状态历史
         stats = self.state_history_manager.get_stats()
         if stats["current_size"] > stats["max_size"] * 0.8:
-            print(f"⚠️  状态历史使用率: {stats['current_size']}/{stats['max_size']}")
+            print(f"[WARN]  状态历史使用率: {stats['current_size']}/{stats['max_size']}")
         
         # 内存统计
         try:
@@ -850,9 +850,9 @@ class KernelDI:
             memory_mb = process.memory_info().rss / (1024 * 1024)
             print(f"📊 当前内存使用: {memory_mb:.2f}MB")
         except ImportError:
-            print("⚠️  psutil不可用，跳过内存统计")
+            print("[WARN]  psutil不可用，跳过内存统计")
         
-        print("✅ 内存优化完成")
+        print("[OK] 内存优化完成")
 
 
 class DefaultStateManager(IStateManager):
@@ -872,10 +872,10 @@ class DefaultStateManager(IStateManager):
         from .nuwa_state import NuwaState
         loaded = NuwaState.load_from_file(self.state_file_path)
         if loaded:
-            print(f"✅ 已加载状态: {self.state_file_path}")
+            print(f"[OK] 已加载状态: {self.state_file_path}")
             return loaded
         else:
-            print(f"📝 创建新状态")
+            print(f"[INFO] 创建新状态")
             return NuwaState()
     
     def get_state(self) -> NuwaState:

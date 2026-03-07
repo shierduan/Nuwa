@@ -119,7 +119,7 @@ class ReplayBuffer:
         self.buffer = deque(maxlen=capacity)
         self.lock = threading.Lock()
         
-        print(f"✅ ReplayBuffer 初始化完成，容量: {capacity}")
+        print(f"[OK] ReplayBuffer 初始化完成，容量: {capacity}")
     
     def add(self, interaction: Interaction, reward: float):
         """
@@ -207,7 +207,7 @@ class ReplayBuffer:
             
             return True
         except Exception as e:
-            print(f"⚠️ 保存经验失败: {e}")
+            print(f"[WARN] 保存经验失败: {e}")
             return False
     
     def load(self, filepath: str) -> bool:
@@ -245,7 +245,7 @@ class ReplayBuffer:
             print(f"📥 已加载 {len(interactions)} 条经验")
             return True
         except Exception as e:
-            print(f"⚠️ 加载经验失败: {e}")
+            print(f"[WARN] 加载经验失败: {e}")
             return False
 
 
@@ -274,12 +274,12 @@ class QNetwork:
             self.model = NeuralNetwork(state_dim, action_dim)
             self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
             self.use_torch = True
-            print(f"✅ QNetwork 使用PyTorch实现")
+            print(f"[OK] QNetwork 使用PyTorch实现")
         else:
             # 使用Q表
             self.q_table = np.zeros((state_dim, action_dim))
             self.use_torch = False
-            print(f"⚠️ QNetwork 使用NumPy Q表实现（未安装PyTorch）")
+            print(f"[WARN] QNetwork 使用NumPy Q表实现（未安装PyTorch）")
     
     def get_q_values(self, state: np.ndarray) -> np.ndarray:
         """
@@ -845,10 +845,10 @@ class SelfEvolutionRL:
                 qnet_file = os.path.join(directory, "q_network.pth")
                 torch.save(self.q_network.model.state_dict(), qnet_file)
             
-            print(f"💾 强化学习状态已保存到 {directory}")
+            print(f"[SAVE] 强化学习状态已保存到 {directory}")
             return True
         except Exception as e:
-            print(f"⚠️ 保存状态失败: {e}")
+            print(f"[WARN] 保存状态失败: {e}")
             return False
     
     def load_state(self, directory: str) -> bool:
@@ -884,7 +884,7 @@ class SelfEvolutionRL:
             print(f"📥 强化学习状态已从 {directory} 加载")
             return True
         except Exception as e:
-            print(f"⚠️ 加载状态失败: {e}")
+            print(f"[WARN] 加载状态失败: {e}")
             return False
 
 

@@ -466,7 +466,7 @@ class NuwaState:
             
             return True
         except Exception as e:
-            print(f"⚠️ 保存状态失败: {e}")
+            print(f"[WARN] 保存状态失败: {e}")
             # 发射保存失败事件
             if self._event_emitter and EVENTS_AVAILABLE:
                 self.emit_event(StateEventType.STATE_SAVED, {
@@ -510,7 +510,7 @@ class NuwaState:
             
             return state
         except Exception as e:
-            print(f"⚠️ 加载状态失败: {e}")
+            print(f"[WARN] 加载状态失败: {e}")
             return None
     
     def save(self, path: str) -> bool:

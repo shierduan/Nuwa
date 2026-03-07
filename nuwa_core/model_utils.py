@@ -78,11 +78,11 @@ def ensure_embedding_model_dir(loader_cls: Optional[Callable], verbose: bool = T
             model.save(target_dir)
             _embedding_dir_cache = target_dir
             if verbose:
-                print(f"✅ 嵌入模型已缓存到 {target_dir}")
+                print(f"[OK] 嵌入模型已缓存到 {target_dir}")
             return target_dir
         except Exception as e:
             if verbose:
-                print(f"❌ 下载嵌入模型失败：{e}")
+                print(f"[ERROR] 下载嵌入模型失败：{e}")
                 print("💡 尝试设置环境变量 HF_ENDPOINT 为国内源，例如：")
                 print("   set HF_ENDPOINT=https://hf-mirror.com")
             return None

@@ -15,6 +15,41 @@ from typing import Optional, Dict
 from datetime import datetime
 from colorama import init, Fore, Style
 
+# 依赖检查：在导入核心模块前检查关键依赖
+def check_critical_dependencies():
+    """检查关键依赖并提供友好的错误提示"""
+    missing_deps = []
+    
+    # 检查 pyarrow
+    try:
+        import pyarrow
+    except ImportError:
+        missing_deps.append("pyarrow")
+    
+    # 检查 lancedb
+    try:
+        import lancedb
+    except ImportError:
+        missing_deps.append("lancedb")
+    
+    # 检查 sentence-transformers
+    try:
+        import sentence_transformers
+    except ImportError:
+        missing_deps.append("sentence-transformers")
+    
+    if missing_deps:
+        print(f"{Fore.RED}❌ 错误：缺少关键依赖包{Style.RESET_ALL}")
+        print(f"   缺失的包：{', '.join(missing_deps)}")
+        print(f"\n   请运行以下命令安装:")
+        print(f"   pip install {' '.join(missing_deps)}")
+        print(f"\n   或使用 requirements.txt:")
+        print(f"   pip install -r requirements.txt")
+        sys.exit(1)
+
+# 执行依赖检查
+check_critical_dependencies()
+
 # 配置 logging 模块
 logging.basicConfig(
     level=logging.INFO,

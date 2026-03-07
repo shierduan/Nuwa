@@ -91,9 +91,9 @@ class Personality:
    - 增量值表示相对于当前值的变化量（正数表示增加，负数表示减少）
 
 4. <fact_update> 标签：当你确认了新的“绝对事实”时使用（例如用户自报姓名、关系、偏好等）。
-   - ⚠️ 只记录【长期有效】【客观】的信息（如姓名、职业、稳定偏好）。
-   - ❌ 不要记录主观感受或临时状态（如“他今天不开心”“他正在吃饭”）。
-   - ❌ 不要记录推测；只有用户亲口确认或客观事实才可写入。
+   - [WARN] 只记录【长期有效】【客观】的信息（如姓名、职业、稳定偏好）。
+   - [ERROR] 不要记录主观感受或临时状态（如“他今天不开心”“他正在吃饭”）。
+   - [ERROR] 不要记录推测；只有用户亲口确认或客观事实才可写入。
    - 内容必须为 JSON，写入事实账本（fact_book）。
    - 示例：<fact_update>{{"user_name": "十二", "code_style": "pythonic"}}</fact_update>
    - 事实一旦写入 fact_book，就视为你真正记得的内容，除非用户主动提出疑问，否则不要再向用户确认或追问这些事实。
@@ -143,7 +143,7 @@ Incorrect Format (Novel):
                 
                 return True
             except (json.JSONDecodeError, IOError) as e:
-                print(f"⚠️ 加载人格设定失败: {e}")
+                print(f"[WARN] 加载人格设定失败: {e}")
         return False
     
     def save_personality(self) -> bool:
@@ -169,7 +169,7 @@ Incorrect Format (Novel):
             
             return True
         except IOError as e:
-            print(f"⚠️ 保存人格设定失败: {e}")
+            print(f"[WARN] 保存人格设定失败: {e}")
             return False
     
     def build_system_prompt(self, evolved_persona_block: str = "") -> str:

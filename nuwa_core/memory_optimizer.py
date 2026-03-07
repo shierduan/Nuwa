@@ -18,7 +18,7 @@ try:
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False
-    print("⚠️  psutil模块不可用，内存监控功能将受限")
+    print("[WARN]  psutil模块不可用，内存监控功能将受限")
 from collections import deque
 from typing import List, Optional, Dict, Any
 from threading import Lock, Thread
@@ -59,7 +59,7 @@ class StateHistoryManager:
         self.total_removed = 0
         self.last_cleanup_time = time.time()
         
-        print(f"✅ StateHistoryManager 初始化完成")
+        print(f"[OK] StateHistoryManager 初始化完成")
         print(f"   - 最大历史记录: {max_history}")
         print(f"   - 自动清理: {'启用' if auto_cleanup else '禁用'}")
     
@@ -285,13 +285,13 @@ class AutoCleaner:
         self.last_cleanup = 0
         self.cleanup_count = 0
         
-        print(f"✅ AutoCleaner 初始化完成")
+        print(f"[OK] AutoCleaner 初始化完成")
         print(f"   - 检查间隔: {check_interval}秒")
     
     def start(self):
         """启动自动清理"""
         if self.running:
-            print("⚠️  AutoCleaner 已在运行")
+            print("[WARN]  AutoCleaner 已在运行")
             return
         
         self.running = True
@@ -319,7 +319,7 @@ class AutoCleaner:
                 self._perform_cleanup()
                 
             except Exception as e:
-                print(f"⚠️  清理循环错误: {e}")
+                print(f"[WARN]  清理循环错误: {e}")
     
     def _perform_cleanup(self):
         """执行清理操作"""
@@ -339,14 +339,14 @@ class AutoCleaner:
                         if diff > 0:
                             cleaned_memory += diff * 100  # 假设每条缓存约100字节
             except Exception as e:
-                print(f"⚠️  缓存清理失败: {e}")
+                print(f"[WARN]  缓存清理失败: {e}")
         
         # 2. 检查状态历史大小
         if self.state_history:
             stats = self.state_history.get_stats()
             if stats["current_size"] > stats["max_size"] * 0.9:
                 # 接近上限，强制清理
-                print(f"⚠️  状态历史接近上限 ({stats['current_size']}/{stats['max_size']})")
+                print(f"[WARN]  状态历史接近上限 ({stats['current_size']}/{stats['max_size']})")
         
         # 3. Python垃圾回收
         import gc
@@ -396,7 +396,7 @@ class MemoryOptimizer:
         self.memory_history: List[Dict[str, Any]] = []
         self.max_history_length = 100
         
-        print("✅ MemoryOptimizer 初始化完成")
+        print("[OK] MemoryOptimizer 初始化完成")
     
     def add_state(self, state_vector: StateVector):
         """添加状态到历史"""
@@ -452,7 +452,7 @@ class MemoryOptimizer:
         memory_stats = self.check_memory()
         print(f"📊 当前内存使用: {memory_stats['current_mb']}MB (峰值: {memory_stats['peak_mb']}MB)")
         
-        print("✅ 内存优化完成")
+        print("[OK] 内存优化完成")
     
     def start_auto_optimization(self):
         """启动自动优化"""
@@ -468,4 +468,4 @@ class MemoryOptimizer:
         self.state_history.clear()
         if self.auto_cleaner.cache_manager:
             self.auto_cleaner.cache_manager.clear_all()
-        print("✅ 内存优化器已完全清理")
+        print("[OK] 内存优化器已完全清理")

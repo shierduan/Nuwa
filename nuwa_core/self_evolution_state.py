@@ -72,7 +72,7 @@ class SelfEvolutionState:
                 print(f"📥 [SelfEvolutionState] 成功加载自我进化状态，共演化 {self.state.get('evolution_count', 0)} 次")
                 return True
             except (json.JSONDecodeError, IOError, TypeError) as e:
-                print(f"⚠️ [SelfEvolutionState] 加载自我进化状态失败: {e}")
+                print(f"[WARN] [SelfEvolutionState] 加载自我进化状态失败: {e}")
                 # 加载失败时使用默认状态
                 self.reset_state()
         return False
@@ -92,10 +92,10 @@ class SelfEvolutionState:
             with open(self.evolution_file_path, "w", encoding="utf-8") as f:
                 json.dump(self.state, f, ensure_ascii=False, indent=2)
             
-            print(f"💾 [SelfEvolutionState] 自我进化状态已保存到 {self.evolution_file_path}")
+            print(f"[SAVE] [SelfEvolutionState] 自我进化状态已保存到 {self.evolution_file_path}")
             return True
         except IOError as e:
-            print(f"⚠️ [SelfEvolutionState] 保存自我进化状态失败: {e}")
+            print(f"[WARN] [SelfEvolutionState] 保存自我进化状态失败: {e}")
             return False
     
     def update_state(self, new_state: Dict[str, Any]) -> bool:
@@ -109,7 +109,7 @@ class SelfEvolutionState:
             是否更新成功
         """
         if not isinstance(new_state, dict):
-            print(f"⚠️ [SelfEvolutionState] 无效的状态数据类型: {type(new_state)}")
+            print(f"[WARN] [SelfEvolutionState] 无效的状态数据类型: {type(new_state)}")
             return False
         
         try:
@@ -136,7 +136,7 @@ class SelfEvolutionState:
             # 保存更新后的状态
             return self.save_state()
         except Exception as e:
-            print(f"⚠️ [SelfEvolutionState] 更新状态失败: {e}")
+            print(f"[WARN] [SelfEvolutionState] 更新状态失败: {e}")
             import traceback
             traceback.print_exc()
             return False

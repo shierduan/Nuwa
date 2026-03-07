@@ -85,7 +85,7 @@ class SpeechRecognizer(BaseProcessor):
     def _load_model(self):
         """加载Whisper模型"""
         if not TRANSFORMERS_AVAILABLE:
-            print("⚠️ transformers库不可用，语音识别功能受限")
+            print("[WARN] transformers库不可用，语音识别功能受限")
             return
         
         try:
@@ -93,9 +93,9 @@ class SpeechRecognizer(BaseProcessor):
             self.processor = WhisperProcessor.from_pretrained(self.model_name)
             self.model = WhisperForConditionalGeneration.from_pretrained(self.model_name)
             self._available = True
-            print(f"✅ Whisper模型加载完成: {self.model_name}")
+            print(f"[OK] Whisper模型加载完成: {self.model_name}")
         except Exception as e:
-            print(f"⚠️ Whisper模型加载失败: {e}")
+            print(f"[WARN] Whisper模型加载失败: {e}")
             self._available = False
     
     def is_available(self) -> bool:
@@ -113,7 +113,7 @@ class SpeechRecognizer(BaseProcessor):
             识别文本
         """
         if not self.is_available():
-            return "⚠️ 语音识别服务不可用"
+            return "[WARN] 语音识别服务不可用"
         
         try:
             # 读取音频
@@ -124,7 +124,7 @@ class SpeechRecognizer(BaseProcessor):
                     audio, sr = librosa.load(audio_data, sr=16000)
                 else:
                     # 简单读取（需要soundfile或类似库）
-                    return "⚠️ 需要librosa支持文件路径读取"
+                    return "[WARN] 需要librosa支持文件路径读取"
             else:
                 # 字节流
                 import io
@@ -159,7 +159,7 @@ class SpeechRecognizer(BaseProcessor):
             return transcription
             
         except Exception as e:
-            return f"⚠️ 语音识别失败: {e}"
+            return f"[WARN] 语音识别失败: {e}"
     
     async def transcribe(self, audio_data: Union[bytes, str], **kwargs) -> str:
         """转录音频（别名）"""
@@ -186,7 +186,7 @@ class ImageUnderstander(BaseProcessor):
     def _load_model(self):
         """加载CLIP模型"""
         if not TRANSFORMERS_AVAILABLE:
-            print("⚠️ transformers库不可用，图像理解功能受限")
+            print("[WARN] transformers库不可用，图像理解功能受限")
             return
         
         try:
@@ -194,9 +194,9 @@ class ImageUnderstander(BaseProcessor):
             self.processor = CLIPProcessor.from_pretrained(self.model_name)
             self.model = CLIPModel.from_pretrained(self.model_name)
             self._available = True
-            print(f"✅ CLIP模型加载完成: {self.model_name}")
+            print(f"[OK] CLIP模型加载完成: {self.model_name}")
         except Exception as e:
-            print(f"⚠️ CLIP模型加载失败: {e}")
+            print(f"[WARN] CLIP模型加载失败: {e}")
             self._available = False
     
     def is_available(self) -> bool:
@@ -214,7 +214,7 @@ class ImageUnderstander(BaseProcessor):
             图像描述或分析结果
         """
         if not self.is_available():
-            return "⚠️ 图像理解服务不可用"
+            return "[WARN] 图像理解服务不可用"
         
         try:
             # 加载图像
@@ -223,13 +223,13 @@ class ImageUnderstander(BaseProcessor):
                 if PIL_AVAILABLE:
                     image = Image.open(image_data).convert('RGB')
                 else:
-                    return "⚠️ 需要PIL支持文件路径读取"
+                    return "[WARN] 需要PIL支持文件路径读取"
             else:
                 # 字节流
                 if PIL_AVAILABLE:
                     image = Image.open(io.BytesIO(image_data)).convert('RGB')
                 else:
-                    return "⚠️ 需要PIL处理字节流"
+                    return "[WARN] 需要PIL处理字节流"
             
             # 准备描述文本（用于零样本分类）
             description_text = kwargs.get(
@@ -262,14 +262,14 @@ class ImageUnderstander(BaseProcessor):
             
             # 如果相似度高，可以扩展描述
             if similarity > 0.25:
-                description += " ✅ 匹配度较高"
+                description += " [OK] 匹配度较高"
             else:
-                description += " ⚠️ 匹配度较低"
+                description += " [WARN] 匹配度较低"
             
             return description
             
         except Exception as e:
-            return f"⚠️ 图像理解失败: {e}"
+            return f"[WARN] 图像理解失败: {e}"
     
     async def describe(self, image_data: Union[bytes, str], **kwargs) -> str:
         """生成图像描述（别名）"""
@@ -296,7 +296,7 @@ class TTSSynthesizer(BaseProcessor):
     def _load_model(self):
         """加载VITS模型"""
         if not TRANSFORMERS_AVAILABLE:
-            print("⚠️ transformers库不可用，语音合成功能受限")
+            print("[WARN] transformers库不可用，语音合成功能受限")
             return
         
         try:
@@ -304,9 +304,9 @@ class TTSSynthesizer(BaseProcessor):
             self.tokenizer = VitsTokenizer.from_pretrained(self.model_name)
             self.model = VitsModel.from_pretrained(self.model_name)
             self._available = True
-            print(f"✅ VITS模型加载完成: {self.model_name}")
+            print(f"[OK] VITS模型加载完成: {self.model_name}")
         except Exception as e:
-            print(f"⚠️ VITS模型加载失败: {e}")
+            print(f"[WARN] VITS模型加载失败: {e}")
             self._available = False
     
     def is_available(self) -> bool:
@@ -324,7 +324,7 @@ class TTSSynthesizer(BaseProcessor):
             音频字节流（WAV格式）
         """
         if not self.is_available():
-            return b"⚠️ 语音合成服务不可用"
+            return b"[WARN] 语音合成服务不可用"
         
         try:
             # 编码文本
@@ -348,7 +348,7 @@ class TTSSynthesizer(BaseProcessor):
             return audio_bytes
             
         except Exception as e:
-            return f"⚠️ 语音合成失败: {e}".encode()
+            return f"[WARN] 语音合成失败: {e}".encode()
     
     async def synthesize(self, text: str, **kwargs) -> bytes:
         """合成语音（别名）"""
@@ -384,7 +384,7 @@ class MultiModalProcessor:
             self.speech_synthesizer.is_available()
         ])
         
-        print(f"✅ 可用处理器: {available_count}/3")
+        print(f"[OK] 可用处理器: {available_count}/3")
         print("=" * 60)
     
     def is_available(self, modality: str = "all") -> bool:

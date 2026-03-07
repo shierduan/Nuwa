@@ -26,7 +26,7 @@ try:
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False
-    print("⚠️  psutil模块不可用，系统资源监控功能将受限")
+    print("[WARN]  psutil模块不可用，系统资源监控功能将受限")
 
 try:
     from prometheus_client import (
@@ -105,14 +105,14 @@ class MetricsCollector:
                 # 启动服务器线程
                 server_thread = threading.Thread(target=server.serve_forever, daemon=True)
                 server_thread.start()
-                print(f"✅ Metrics server started on port {self.config.http_port}")
+                print(f"[OK] Metrics server started on port {self.config.http_port}")
                 
                 # 如果Prometheus可用，也启动Prometheus服务器
                 if PROMETHEUS_AVAILABLE:
                     start_http_server(self.config.http_port + 1)
-                    print(f"✅ Prometheus metrics server started on port {self.config.http_port + 1}")
+                    print(f"[OK] Prometheus metrics server started on port {self.config.http_port + 1}")
             except Exception as e:
-                print(f"⚠️ Failed to start metrics server: {e}")
+                print(f"[WARN] Failed to start metrics server: {e}")
     
     def _init_prometheus_metrics(self):
         """初始化Prometheus指标"""
