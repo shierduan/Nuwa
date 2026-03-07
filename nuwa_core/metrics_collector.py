@@ -119,6 +119,12 @@ class MetricsCollector:
         if not PROMETHEUS_AVAILABLE:
             return
         
+        # 如果已经初始化过，跳过（避免重复注册）
+        if getattr(self, '_prometheus_metrics_initialized', False):
+            return
+        
+        self._prometheus_metrics_initialized = True
+        
         # 响应时间分布
         self.http_request_duration = Histogram(
             'http_request_duration_seconds',
@@ -595,17 +601,35 @@ _global_metrics_collector: Optional[MetricsCollector] = None
 
 def get_metrics_collector() -> MetricsCollector:
     """获取全局指标收集器"""
-    global _global_metrics_collector
-    if _global_metrics_collector is None:
-        _global_metrics_collector = MetricsCollector()
-    return _global_metrics_collector
+    # 直接使用 init_metrics_collector，确保只创建一个实例
+    return init_metrics_collector()
 
 
 def init_metrics_collector(config: MetricsConfig = None) -> MetricsCollector:
     """初始化全局指标收集器"""
     global _global_metrics_collector
-    if _global_metrics_collector is None:
-        _global_metrics_collector = MetricsCollector(config)
+    
+    # 如果已存在实例，直接返回（避免重复注册）
+    if _global_metrics_collector is not None:
+        if config is not None:
+            _global_metrics_collector.config = config
+        return _global_metrics_collector
+    
+    # 先清理 Prometheus 全局注册表（如果存在旧的指标）
+    if PROMETHEUS_AVAILABLE:
+        try:
+            from prometheus_client import REGISTRY
+            # 注销所有已注册的指标
+            for collector in list(REGISTRY._collector_to_names.keys()):
+                try:
+                    REGISTRY.unregister(collector)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    
+    # 创建新实例
+    _global_metrics_collector = MetricsCollector(config)
     return _global_metrics_collector
 
 
