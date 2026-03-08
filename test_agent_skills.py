@@ -20,7 +20,6 @@ async def test_weather_skill():
         api_key="lm-studio",
         model_name="local-model",
         enable_cache=False,
-        enable_tts=False,
         enable_live2d=False
     )
     

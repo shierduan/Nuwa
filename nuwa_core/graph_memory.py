@@ -41,7 +41,7 @@ except ImportError:
     NETWORKX_AVAILABLE = False
 
 # 导入现有模块
-from .semantic_field import vectorize_state, StateVector
+from .riemannian_semantic_field import vectorize_state, StateVector
 
 
 @dataclass

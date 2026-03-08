@@ -486,7 +486,6 @@ def evolve(current_text: str, core_vector: Optional[np.ndarray] = None,
     evolved, info = field.evolve(vector, dt=dt, iterations=iterations)
     
     # 包装为StateVector（如果需要）
-    from .semantic_field import StateVector
     result = StateVector(
         vector=evolved,
         description=f"黎曼演化结果",

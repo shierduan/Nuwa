@@ -188,29 +188,6 @@ class TestFullSystemIntegration:
         if len(controller.rl_agent.memory) >= controller.rl_agent.batch_size:
             controller.rl_agent.train()
     
-    def test_multimodal_integration(self):
-        """测试多模态集成"""
-        # 这里模拟文本和潜在的其他模态
-        
-        # 1. 文本记忆
-        cortex = MemoryCortex()
-        text_memory = "用户展示了图片，描述为美丽的风景"
-        cortex.store_memory(text_memory, {"modality": "text"})
-        
-        # 2. 模拟视觉特征（向量）
-        visual_features = np.random.rand(512)  # 假设的视觉特征
-        
-        # 3. 语义场处理（统一到相同维度）
-        # 使用嵌入模型的维度
-        core_dim = 384
-        
-        # 简单投影（实际应使用专用模型）
-        if len(visual_features) > core_dim:
-            visual_embedded = visual_features[:core_dim]
-        else:
-            visual_embedded = np.pad(visual_features, (0, core_dim - len(visual_features)))
-        
-        visual_embedded = visual_embedded / np.linalg.norm(visual_embedded)
         
         # 4. 创建语义场
         core_vector = np.random.rand(core_dim)

@@ -12,11 +12,9 @@ try:
         base_url="http://127.0.0.1:1234/v1",
         api_key="lm-studio",
         model_name="local-model",
-        enable_tts=False,
         enable_live2d=False,
     )
     print("✅ 成功创建 NuwaKernelAsync 实例")
-    print(f"✅ TTS 启用状态: {kernel.enable_tts}")
     print(f"✅ Live2D 启用状态: {kernel.enable_live2d}")
     
 except Exception as e:

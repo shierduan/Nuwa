@@ -1,5 +1,5 @@
 # 依赖目录
-node_modules/
+# node_modules/ 已移除（前端已分离到 123 项目）
 libs/
 lib/
 
@@ -19,8 +19,6 @@ data/
 # 构建输出
 dist/
 build/
-electron-dist/
-electron-build/
 
 # 环境配置文件
 .env
@@ -55,9 +53,9 @@ delete_memories.py
 # Windows系统文件
 Thumbs.db
 
-# 模型文件
-models/
-examples/
+# 模型文件 - 已分离到 123 项目
+# models/
+# examples/
 
 # 其他
 *.zip

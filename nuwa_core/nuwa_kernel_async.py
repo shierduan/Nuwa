@@ -177,8 +177,6 @@ class NuwaKernelAsync:
         on_message_callback: Optional[Callable[[str], None]] = None,
         enable_cache: bool = True,  # 是否启用缓存
         cache_ttl: int = 300,       # 缓存TTL（秒）
-        enable_tts: bool = False,   # 是否启用TTS（默认改为False，暂时停用）
-        tts_model: str = "facebook/mms-tts-chinese",  # TTS模型名称
         enable_live2d: bool = False,  # 是否启用Live2D（默认改为False，暂时停用）
         max_tokens: int = 512,       # 最大token数
     ):
@@ -194,7 +192,6 @@ class NuwaKernelAsync:
             on_message_callback: 主动消息回调函数
             enable_cache: 是否启用缓存
             cache_ttl: 缓存TTL（秒）
-            enable_tts: 是否启用语音合成
             tts_model: TTS模型名称 (默认: facebook/mms-tts-chinese)
             enable_live2d: 是否启用Live2D显示
         """
@@ -292,18 +289,6 @@ class NuwaKernelAsync:
         self._last_save_time = time.time()
         self._save_interval = 30.0
         
-        # 15. TTS语音合成系统
-        self.enable_tts = enable_tts
-        self.tts_model = tts_model
-        self.tts_synthesizer = None
-        self.tts_cache = {}  # TTS结果缓存
-        self.tts_cache_maxsize = 100  # 最大缓存数量
-        
-        if enable_tts:
-            print("[INFO] TTS系统已启用 (延迟初始化)")
-        else:
-            print("[WARN] TTS系统已禁用")
-            
         # 16. Live2D显示系统
         self.enable_live2d = enable_live2d
         
@@ -355,92 +340,6 @@ class NuwaKernelAsync:
         # 目前暂时为空实现
         pass
     
-    # ==================== TTS语音合成方法 ====================
-    
-    async def _get_tts_synthesizer(self):
-        """延迟初始化TTS合成器"""
-        if not self.enable_tts:
-            return None
-            
-        if self.tts_synthesizer is None:
-            try:
-                from .multimodal_processor import TTSSynthesizer
-                self.tts_synthesizer = TTSSynthesizer(self.tts_model)
-                print(f"[OK] TTS合成器已初始化: {self.tts_model}")
-            except Exception as e:
-                print(f"[WARN] TTS合成器初始化失败: {e}")
-                self.enable_tts = False
-                return None
-        
-        return self.tts_synthesizer
-    
-    async def generate_tts(self, text: str) -> Optional[bytes]:
-        """
-        生成TTS音频（带智能缓存）
-        
-        Args:
-            text: 要转换为语音的文本
-            
-        Returns:
-            WAV格式的音频字节流，失败则返回None
-        """
-        if not self.enable_tts or not text:
-            return None
-        
-        # 简单文本预处理
-        text = text.strip()
-        if not text:
-            return None
-        
-        # 检查缓存
-        cache_key = hashlib.md5(text.encode('utf-8')).hexdigest()
-        if cache_key in self.tts_cache:
-            return self.tts_cache[cache_key]
-        
-        # 获取TTS合成器
-        synthesizer = await self._get_tts_synthesizer()
-        if not synthesizer or not synthesizer.is_available():
-            return None
-        
-        try:
-            # 生成音频
-            audio = await synthesizer.process(text)
-            
-            # 验证音频数据
-            if audio and isinstance(audio, bytes) and len(audio) > 100:
-                # 缓存结果（管理缓存大小）
-                if len(self.tts_cache) >= self.tts_cache_maxsize:
-                    # 移除最旧的缓存项
-                    oldest_key = next(iter(self.tts_cache))
-                    del self.tts_cache[oldest_key]
-                
-                self.tts_cache[cache_key] = audio
-                return audio
-            else:
-                print(f"[WARN] TTS生成无效音频数据: {text[:50]}...")
-                return None
-                
-        except Exception as e:
-            print(f"[WARN] TTS生成失败: {e}")
-            return None
-    
-    def clear_tts_cache(self):
-        """清空TTS缓存"""
-        if self.tts_cache:
-            cache_size = len(self.tts_cache)
-            self.tts_cache.clear()
-            print(f"[INFO] 清空TTS缓存: {cache_size} 项")
-    
-    def get_tts_status(self) -> Dict[str, Any]:
-        """获取TTS系统状态"""
-        status = {
-            "enabled": self.enable_tts,
-            "model": self.tts_model,
-            "cache_size": len(self.tts_cache),
-            "synthesizer_ready": self.tts_synthesizer is not None,
-            "synthesizer_available": self.tts_synthesizer.is_available() if self.tts_synthesizer else False,
-        }
-        return status
     
     def _is_sentence_end(self, text: str) -> bool:
         """检测文本是否以句子结束符结尾"""
@@ -472,7 +371,6 @@ class NuwaKernelAsync:
         
         return sentences
     
-    # ==================== TTS语音合成方法 ====================
     
     def _init_core_vector(self):
         """初始化核心人格向量"""
@@ -568,14 +466,13 @@ class NuwaKernelAsync:
     
     # ==================== 核心处理方法 ====================
     
-    async def process_input(self, user_input: str, system_instruction: Optional[str] = None, enable_tts: bool = None) -> Dict[str, Any]:
+    async def process_input(self, user_input: str, system_instruction: Optional[str] = None) -> Dict[str, Any]:
         """
         处理用户输入（统一异步版本）
         
         Args:
             user_input: 用户输入
             system_instruction: 系统指令
-            enable_tts: 是否启用TTS语音合成（None表示使用默认设置）
             
         Returns:
             包含thought, reply, memories, audio等的字典
@@ -699,15 +596,9 @@ class NuwaKernelAsync:
         # 12. 语义场分析
         semantic_analysis = self._analyze_semantic_evolution(user_input, reply)
         
-        # 13. TTS语音合成（如果启用）
         audio_data = None
-        if enable_tts is None:
-            enable_tts = self.enable_tts
         
-        if enable_tts and reply:
-            # 生成TTS音频
-            audio_bytes = await self.generate_tts(reply)
-            if audio_bytes:
+        if audio_bytes:
                 audio_data = base64.b64encode(audio_bytes).decode()
                 print(f"[INFO] 语音合成完成: {len(audio_bytes)} 字节")
         
@@ -724,7 +615,7 @@ class NuwaKernelAsync:
             "skill_result": skill_result,  # 新增：技能执行结果
         }
     
-    async def process_input_stream(self, user_input: str, websocket, system_instruction: Optional[str] = None, enable_tts: bool = None):
+    async def process_input_stream(self, user_input: str, websocket, system_instruction: Optional[str] = None):
         """
         流式处理用户输入（WebSocket版本）
         
@@ -732,7 +623,6 @@ class NuwaKernelAsync:
             user_input: 用户输入文本
             websocket: WebSocket连接对象
             system_instruction: 系统指令
-            enable_tts: 是否启用TTS语音合成（None表示使用默认设置）
         """
         if not self._llm_available:
             error_msg = {"type": "error", "content": "LLM客户端不可用"}
@@ -740,9 +630,6 @@ class NuwaKernelAsync:
             await websocket.send(json.dumps({"type": "stream_end"}))
             return
         
-        # 确定TTS设置
-        if enable_tts is None:
-            enable_tts = self.enable_tts
         
         # 状态更新和能量消耗（与process_input相同）
         self.state.last_interaction_timestamp = time.time()
@@ -774,7 +661,6 @@ class NuwaKernelAsync:
             )
             
             full_response = ""
-            tts_buffer = ""  # TTS文本缓冲区
             speak_mode = False  # 是否在<speak>标签内
             
             async for chunk in response_stream:
@@ -787,45 +673,6 @@ class NuwaKernelAsync:
                     await websocket.send(json.dumps(stream_msg))
                     
                     # TTS处理（如果启用）
-                    if enable_tts:
-                        # 检测<speak>标签
-                        if "<speak>" in content:
-                            speak_mode = True
-                            tts_buffer = ""
-                        
-                        if speak_mode:
-                            tts_buffer += content
-                            
-                            # 检测</speak>标签或句子结束
-                            if "</speak>" in tts_buffer or self._is_sentence_end(tts_buffer):
-                                # 提取<speak>标签内的内容
-                                start = tts_buffer.find("<speak>") + 7
-                                end = tts_buffer.find("</speak>")
-                                if end == -1:
-                                    end = len(tts_buffer)
-                                
-                                speak_content = tts_buffer[start:end].strip()
-                                
-                                # 如果有完整句子，生成TTS
-                                if speak_content and self._is_sentence_end(speak_content):
-                                    tts_audio = await self.generate_tts(speak_content)
-                                    if tts_audio:
-                                        audio_msg = {
-                                            "type": "audio",
-                                            "data": base64.b64encode(tts_audio).decode(),
-                                            "text": speak_content
-                                        }
-                                        await websocket.send(json.dumps(audio_msg))
-                                    
-                                    # 重置缓冲区（保留</speak>之后的内容）
-                                    if "</speak>" in tts_buffer:
-                                        remaining = tts_buffer[tts_buffer.find("</speak>") + 8:]
-                                        tts_buffer = remaining
-                                        if "<speak>" not in remaining:
-                                            speak_mode = False
-                                    else:
-                                        tts_buffer = ""
-            
             # 发送结束标志
             await websocket.send(json.dumps({"type": "stream_end"}))
             
@@ -842,21 +689,18 @@ class NuwaKernelAsync:
             await websocket.send(json.dumps(error_msg))
             await websocket.send(json.dumps({"type": "stream_end"}))
     
-    async def voice_chat_stream(self, audio_text: str, websocket, enable_tts: bool = True):
+    async def voice_chat_stream(self, audio_text: str, websocket):
         """
         语音对话流式处理
         
         Args:
             audio_text: 语音识别后的文本
             websocket: WebSocket连接对象
-            enable_tts: 是否启用TTS回复
         """
-        # 使用process_input_stream，但强制启用TTS
         await self.process_input_stream(
             user_input=audio_text,
             websocket=websocket,
             system_instruction=None,
-            enable_tts=enable_tts
         )
     
     # ==================== 辅助方法 ====================

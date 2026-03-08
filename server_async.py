@@ -97,7 +97,6 @@ kernel = NuwaKernelAsync(
     on_message_callback=handle_active_message,
     enable_cache=True,
     cache_ttl=300,
-    enable_tts=False,  # 默认禁用TTS
     enable_live2d=False,  # 默认禁用Live2D
 )
 
@@ -193,33 +192,8 @@ async def handle_client(websocket):
                     await websocket.send(json.dumps(test_response))
                     continue
                 
-                # 处理TTS配置请求
-                if data.get("type") == "tts_config":
-                    tts_enabled = data.get("enabled", False)
-                    tts_model = data.get("model", "facebook/mms-tts-chinese")
-                    
-                    # 更新kernel的TTS配置
-                    kernel.enable_tts = tts_enabled
-                    if hasattr(kernel, 'tts_model'):
-                        kernel.tts_model = tts_model
-                    
-                    response_data = {
-                        "type": "tts_config_response",
-                        "status": "success",
-                        "enabled": kernel.enable_tts,
-                        "model": tts_model,
-                        "message": f"TTS配置已更新: {'启用' if tts_enabled else '禁用'}, 模型: {tts_model}"
-                    }
-                    await websocket.send(json.dumps(response_data))
-                    print(f"[TTS] 配置更新: enabled={tts_enabled}, model={tts_model}")
                     continue
                 
-                # 处理TTS状态查询
-                if data.get("type") == "tts_status":
-                    tts_status = kernel.get_tts_status() if hasattr(kernel, 'get_tts_status') else {"enabled": kernel.enable_tts}
-                    response_data = {
-                        "type": "tts_status_response",
-                        "status": tts_status
                     }
                     await websocket.send(json.dumps(response_data))
                     continue
@@ -257,7 +231,6 @@ async def handle_client(websocket):
                 if data.get("type") == "audio_played":
                     audio_text = data.get("text", "")
                     if audio_text:
-                        print(f"[TTS] 音频播放完成: {audio_text[:20]}...")
                     continue
                 
                 # 处理文本消息（使用流式响应）
@@ -332,13 +305,10 @@ async def handle_client(websocket):
                         continue
                     
                     # 普通用户输入
-                    # 使用新的流式处理方法，传递TTS配置
-                    enable_tts = getattr(kernel, 'tts_enabled', False)
                     await kernel.process_input_stream(
                         user_input=user_input,
                         websocket=websocket,
                         system_instruction=None,
-                        enable_tts=enable_tts
                     )
                     print(f"✅ 流式响应完成")
                     

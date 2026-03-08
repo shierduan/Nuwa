@@ -1,5 +1,5 @@
 # 女娲核心系统 - Docker Compose
-# 包含：女娲服务 + 前端管理器 + Prometheus + Grafana
+# 包含：女娲服务 + Prometheus + Grafana 监控
 
 version: '3.8'
 
@@ -39,62 +39,6 @@ services:
         reservations:
           cpus: '1'
           memory: 2G
-
-  # 前端管理器后端
-  nuwa-frontend-backend:
-    build:
-      context: ./frontend-manager/backend
-    container_name: nuwa-frontend-backend
-    restart: unless-stopped
-    ports:
-      - "8002:8000"   # 前端管理器API
-    volumes:
-      - ./frontend-manager/backend/config:/app/config
-      - ./frontend-manager/backend/logs:/app/logs
-      - ./frontend-manager/backend/data:/app/data
-    environment:
-      - CONFIG_PATH=config/config.yaml
-      - LOG_LEVEL=INFO
-      - HOT_RELOAD=true
-    networks:
-      - nuwa-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-
-  # 前端管理器前端
-  nuwa-frontend:
-    build:
-      context: ./frontend-manager/frontend
-    container_name: nuwa-frontend
-    restart: unless-stopped
-    ports:
-      - "5173:80"   # 前端界面
-    environment:
-      - VITE_API_URL=http://nuwa-frontend-backend:8000
-    networks:
-      - nuwa-network
-    depends_on:
-      - nuwa-frontend-backend
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.2'
-          memory: 256M
 
   # Prometheus - 指标收集
   prometheus:

@@ -11,7 +11,6 @@
 - ✅ **语义场论**：黎曼几何语义场，实现数学严格的语义演化
 - ✅ **自适应控制**：基于PPO的自适应PID控制器
 - ✅ **自我进化**：强化学习驱动的人格演化系统
-- ✅ **多模态处理**：支持语音识别（Whisper）、文本转语音（VITS）、图像理解（CLIP）
 - ✅ **监控系统**：Prometheus + Grafana 完整监控方案
 - ✅ **容器化部署**：Docker + Docker Compose 一键部署
 
@@ -38,7 +37,6 @@
    - 启动方式对比
    - 常见问题解答
 
-2. **[TTS集成指南.md](TTS集成指南.md)** - 语音功能使用指南
    - 功能状态说明
    - 快速开始示例
    - 配置方法
@@ -137,7 +135,6 @@ nuwa_core/
 │   └── self_evolution_state.py   ✅ 进化状态（257行）
 │
 ├── 多模态处理
-│   ├── multimodal_processor.py   ✅ 处理器（504行）
 │   ├── multimodal_integration.py ✅ 集成（444行）
 │   └── model_utils.py            ✅ 模型工具
 │
@@ -169,7 +166,6 @@ nuwa_core/
 | **黎曼几何语义场** | riemannian_semantic_field.py | ⭐⭐⭐⭐⭐ | 双曲流形，Hessian计算，数值稳定 |
 | **自适应PID** | adaptive_pid.py | ⭐⭐⭐⭐⭐ | PPO强化学习，参数自适应调整 |
 | **自我进化RL** | self_evolution_rl.py | ⭐⭐⭐⭐⭐ | Q-Learning，经验回放，双模式支持 |
-| **多模态处理器** | multimodal_processor.py | ⭐⭐⭐⭐⭐ | Whisper/CLIP/VITS完整支持 |
 | **缓存管理** | cache_manager.py | ⭐⭐⭐⭐⭐ | 多级缓存，智能键生成，线程安全 |
 | **人格管理** | personality.py | ⭐⭐⭐⭐ | 初始人格，响应协议，风格指南 |
 | **进化状态** | self_evolution_state.py | ⭐⭐⭐⭐⭐ | 演化人格层，时间加权，历史记录 |
@@ -185,16 +181,7 @@ nuwa_core/
 | **基础自我进化** | self_evolution.py | ⭐⭐ | 与RL版本功能重叠，需要清理 |
 
 #### ❌ 占位符功能
-
-| 功能模块 | 文件 | 状态 | 说明 |
-|---------|------|------|------|
-| **TTS核心集成** | nuwa_kernel_async.py | ❌ 缺失 | 多模态处理器已实现，但内核未完全集成 |
-| **WebSocket音频** | server_async.py | ❌ 缺失 | 支持文本流，音频流待实现 |
-| **控制台TTS** | main_async.py | ❌ 缺失 | 无语音输出功能 |
-
----
-
-## 🚀 快速开始
+n（无，TTS/音频功能已迁移到前端独立项目）
 
 ### 1. 环境准备
 
@@ -250,9 +237,7 @@ npm run start
 
 ```bash
 # 快速测试TTS
-python -c "from nuwa_core.multimodal_processor import MultimodalProcessor; p = MultimodalProcessor(); p.text_to_speech('你好，我是女娲')"
 
-# 详细说明: 查看 docs/TTS集成指南.md
 ```
 
 ---
@@ -400,7 +385,6 @@ docker logs nuwa-grafana
 
 详见：
 - [快速开始.txt](快速开始.txt) - 常见问题解答
-- [TTS集成指南.md](TTS集成指南.md) - TTS问题排查
 - [部署总结.md](部署总结.md) - 部署问题排查
 
 ---
@@ -475,9 +459,6 @@ docker-compose up -d
 
 ### ⏳ 进行中
 
-- [ ] TTS核心集成（nuwa_kernel_async.py）
-- [ ] WebSocket音频流支持
-- [ ] 控制台TTS输出
 - [ ] 完善单元测试
 - [ ] 完善集成测试
 
@@ -500,7 +481,6 @@ docker-compose up -d
 - **自检报告**: [自检报告.md](自检报告.md)
 
 ### 功能文档
-- **TTS集成**: [TTS集成指南.md](TTS集成指南.md)
 - **黎曼几何**: [黎曼几何语义场使用指南.md](黎曼几何语义场使用指南.md)
 - **自适应PID**: [自适应PID使用指南.md](自适应PID使用指南.md)
 - **自我进化**: [自我进化使用指南.md](自我进化使用指南.md)

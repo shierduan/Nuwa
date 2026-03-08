@@ -17,7 +17,7 @@ from .sync_compat import AsyncLLMClient, SyncLLMClient, run_sync
 from .nuwa_state import NuwaState
 from .drive_system import BioRhythm, PIDController
 from .memory_cortex import MemoryCortex
-from .semantic_field import (
+from .riemannian_semantic_field import (
     vectorize_state,
     StateVector,
     calculate_potential_energy,

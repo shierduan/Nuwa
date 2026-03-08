@@ -34,7 +34,7 @@ from .config_manager import (
     get_container,
 )
 from .nuwa_state import NuwaState
-from .semantic_field import (
+from .riemannian_semantic_field import (
     vectorize_state,
     StateVector,
     calculate_potential_energy,
@@ -428,7 +428,7 @@ class KernelDI:
     
     async def _retrieve_memories_direct(self, user_input: str, system_instruction: Optional[str]) -> List[Dict]:
         """实际的记忆检索逻辑"""
-        from .semantic_field import vectorize_state
+        from .riemannian_semantic_field import vectorize_state
         
         # 获取情绪向量
         state = self.state_manager.get_state()
@@ -599,7 +599,7 @@ class KernelDI:
     def _analyze_semantic_evolution(self, user_input: str, reply: str) -> Dict:
         """分析语义场演化"""
         try:
-            from .semantic_field import calculate_potential_energy, calculate_gradient
+            from .riemannian_semantic_field import calculate_potential_energy, calculate_gradient
             import numpy as np
             
             # 构建状态描述
@@ -628,12 +628,12 @@ class KernelDI:
                     potential_energy = potential_result[0]  # 第一个元素是势能值
                 else:
                     potential_energy = potential_result  # 兼容返回单个值的情况
-                                
-                                # 确保势能值是有效的浮点数
-                                if not isinstance(potential_energy, (int, float)) or not np.isfinite(potential_energy):
-                                    potential_energy = 0.0
-                                    
-                                gradient = calculate_gradient(state_vector, self._core_vector)                
+                
+                # 确保势能值是有效的浮点数
+                if not isinstance(potential_energy, (int, float)) or not np.isfinite(potential_energy):
+                    potential_energy = 0.0
+                    
+                gradient = calculate_gradient(state_vector, self._core_vector)                
                 # 获取历史统计
                 stats = self.state_history_manager.get_stats()
                 

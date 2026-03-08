@@ -24,7 +24,6 @@ async def test_skill_integration():
         model_name="ep-20260306005226-whxk9",
         enable_cache=True,
         cache_ttl=300,
-        enable_tts=False,
         enable_live2d=False,
         max_tokens=12000
     )

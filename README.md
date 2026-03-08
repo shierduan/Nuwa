@@ -6,6 +6,8 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Test Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](tests/)
 
+> **💡 项目分离通知** (2026-03-08): Live2D 和 Web 前端已独立到 [`123/`](./123/) 子目录作为单独项目。本项目现在专注于 AI Agent 核心框架。
+
 ---
 
 ## 📖 目录
@@ -119,26 +121,6 @@ memories = cortex.retrieve_memory("相关查询", top_k=5)
 - ✅ 情绪加权检索
 - ✅ 记忆做梦系统
 
-### 5. 🔊 多模态处理 (Multimodal Processing)
-
-集成 Whisper（语音识别）、VITS（文本转语音）、CLIP（图像理解）的完整多模态支持。
-
-```python
-from nuwa_core.multimodal_processor import MultimodalProcessor
-
-processor = MultimodalProcessor()
-# 语音识别
-text = processor.speech_to_audio(audio_path="audio.wav")
-# 文本转语音
-audio = processor.text_to_speech(text="你好，我是女娲", speaker_id=0)
-# 图像理解
-description = processor.image_to_text(image_path="image.jpg")
-```
-
-**功能状态**：
-- ✅ 多模态处理器已实现
-- ⚠️ 核心集成进行中
-- ⚠️ WebSocket 音频流待实现
 
 ### 6. 📊 统一异步内核 (Unified Async Kernel)
 
@@ -152,7 +134,6 @@ kernel = NuwaKernelAsync(
     data_dir="data",
     base_url="http://127.0.0.1:1234/v1",
     enable_cache=True,
-    enable_tts=False,
 )
 result = await kernel.process_input("你好")
 ```
@@ -544,8 +525,6 @@ flowchart TD
         G[SelfEvolutionRL] -->|优化| B
     end
     
-    subgraph "多模态层"
-        H[MultimodalProcessor] -->|TTS/STT/CAP| A
     end
     
     subgraph "交互层"
@@ -594,8 +573,6 @@ Nuwa/
 │   ├── self_evolution_rl.py    # RL 自我进化 (892 行)
 │   ├── self_evolution_state.py # 进化状态 (257 行)
 │   │
-│   ├── multimodal_processor.py # 多模态处理器 (504 行)
-│   ├── multimodal_integration.py # 多模态集成 (444 行)
 │   ├── model_utils.py          # 模型工具
 │   │
 │   ├── cache_manager.py        # 缓存管理 (500 行)
@@ -1070,7 +1047,6 @@ export LLM_MODEL_NAME="local-model"
 | **黎曼几何语义场** | riemannian_semantic_field.py | 562 | 双曲流形，Hessian 计算 |
 | **自适应 PID** | adaptive_pid.py | 892 | PPO 强化学习，参数自适应 |
 | **自我进化 RL** | self_evolution_rl.py | 892 | Q-Learning，经验回放 |
-| **多模态处理器** | multimodal_processor.py | 504 | Whisper/VITS/CLIP |
 | **缓存管理** | cache_manager.py | 500 | 多级缓存，线程安全 |
 | **内存优化** | memory_optimizer.py | 471 | 滑动窗口，自动清理 |
 
@@ -1082,13 +1058,6 @@ export LLM_MODEL_NAME="local-model"
 | **图记忆** | memory_graph.py / graph_memory.py | 实现不完整，可能有冗余 |
 | **基础自我进化** | self_evolution.py | 与 RL 版本功能重叠，需要清理 |
 
-#### ❌ 占位符功能
-
-| 功能模块 | 状态 | 说明 |
-|---------|------|------|
-| **TTS 核心集成** | ⚠️ 进行中 | 多模态处理器已实现，内核未完全集成 |
-| **WebSocket 音频流** | ⚠️ 待实现 | 当前支持文本流，音频流待开发 |
-| **控制台 TTS 输出** | ⚠️ 待实现 | 无语音输出功能 |
 
 ### 性能指标
 
@@ -1110,12 +1079,11 @@ export LLM_MODEL_NAME="local-model"
 - [x] Prometheus + Grafana 监控
 - [x] 统一异步架构迁移
 - [x] 双轨技能系统集成（AgentSkills + ClawHub）
+- [x] **项目分离**：Live2D 和 Web 前端独立到 `123/` 目录
 
 #### ⏳ 进行中
 
-- [ ] TTS 核心集成（nuwa_kernel_async.py）
 - [ ] WebSocket 音频流支持
-- [ ] 控制台 TTS 输出
 - [ ] 图记忆完善
 
 #### 📅 计划中
@@ -1189,10 +1157,6 @@ export LLM_MODEL_NAME="local-model"
 - **pytest-cov**：测试覆盖率报告
 - **pytest-asyncio**：异步测试支持
 
-### 多模态处理
-
-- **OpenAI Whisper**：语音识别（STT）
-- **VITS**：文本转语音（TTS）
 - **CLIP**：图像理解和描述
 
 ### 容器化与部署

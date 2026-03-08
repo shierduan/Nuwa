@@ -161,7 +161,6 @@ class NuwaConsoleAsync:
                 on_message_callback=self.handle_active_message,
                 enable_cache=self.enable_cache,
                 cache_ttl=300,
-                enable_tts=False,  # 默认禁用 TTS
                 enable_live2d=False,  # 默认禁用 Live2D
                 max_tokens=config.llm_max_tokens,
             )
