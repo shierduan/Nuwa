@@ -6,7 +6,7 @@
 # 自定义测试 API (https://api.kilo.ai/api/gateway)
 # 使用提供的 JWT Token 作为 API Key
 llm_base_url: "https://api.kilo.ai/api/gateway"
-llm_api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbnYiOiJwcm9kdWN0aW9uIiwia2lsb1VzZXJJZCI6IjZlNDgwMDUwLTY2NmItNDI1Yi1iOTNmLTlkZjU5Zjg0MDdlNCIsImFwaVRva2VuUGVwcGVyIjpudWxsLCJ2ZXJzaW9uIjozLCJpYXQiOjE3OTI4NTE4NjIsImV4cCI6MTk1MDUzMTg2Mn0.KwnDwaSlRkyNrUipff3RnEXH0BwKj0PUZKPgBbjWASQ"
+llm_api_key: "REPLACE_WITH_YOUR_KILO_AI_JWT"
 llm_model_name: "nvidia/nemotron-3-ultra-550b-a55b:free"  # 可选: kilo-auto, free
 llm_temperature: 0.7
 llm_max_tokens: 4096
@@ -72,7 +72,7 @@ log_level: "INFO"
 channels:
   feishu:
     appId: "cli_a9201497d7385bcd"
-    appSecret: "H5Egf8eh83P8Lfp0XwJi4bTKMWSMyDyL"
+    appSecret: "REPLACE_WITH_YOUR_FEISHU_APP_SECRET"
     domain: "feishu"                      # 国内版 feishu，国际版 lark
     enabled: true
     botName: "女娲"                        # 机器人名称（用于识别 @ 消息）
