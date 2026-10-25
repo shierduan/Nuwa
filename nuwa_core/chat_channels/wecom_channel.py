@@ -5,9 +5,11 @@
 """
 
 import logging
-import requests
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import requests
+
 
 class WeComChannel:
     def __init__(self, config: Dict[str, Any]):
@@ -18,13 +20,13 @@ class WeComChannel:
         self.logger = logging.getLogger(__name__)
         self.access_token = None
         self.token_expire_time = 0
-    
+
     def _get_access_token(self) -> Optional[str]:
         """获取企业微信访问令牌"""
         current_time = time.time()
         if self.access_token and current_time < self.token_expire_time:
             return self.access_token
-        
+
         try:
             url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={self.corp_id}&corpsecret={self.corp_secret}"
             response = requests.get(url)
@@ -39,16 +41,16 @@ class WeComChannel:
         except Exception as e:
             self.logger.error(f"Error getting access token: {str(e)}")
             return None
-    
+
     def send_message(self, message: str, recipient: str) -> bool:
         """发送消息到企业微信"""
         access_token = self._get_access_token()
         if not access_token:
             return False
-        
+
         try:
             url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
-            
+
             # 构建消息体
             payload = {
                 "touser": recipient if recipient.startswith('user:') else recipient,
@@ -58,7 +60,7 @@ class WeComChannel:
                     "content": message
                 }
             }
-            
+
             response = requests.post(url, json=payload)
             data = response.json()
             if data.get('errcode') == 0:
@@ -70,7 +72,7 @@ class WeComChannel:
         except Exception as e:
             self.logger.error(f"Error sending message: {str(e)}")
             return False
-    
+
     def handle_message(self, message: Dict[str, Any]):
         """处理来自企业微信的消息"""
         try:
@@ -79,7 +81,7 @@ class WeComChannel:
             # 可以在这里添加消息处理逻辑，如解析消息内容、调用nuwa的其他模块等
         except Exception as e:
             self.logger.error(f"Error handling message: {str(e)}")
-    
+
     def probe(self) -> Dict[str, Any]:
         """探测企业微信连接状态"""
         access_token = self._get_access_token()
@@ -88,7 +90,7 @@ class WeComChannel:
                 "status": "error",
                 "message": "Failed to get access token"
             }
-        
+
         try:
             url = f"https://qyapi.weixin.qq.com/cgi-bin/department/list?access_token={access_token}"
             response = requests.get(url)

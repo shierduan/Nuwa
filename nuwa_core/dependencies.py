@@ -5,7 +5,11 @@
 """
 
 import sys
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # 存储导入状态
 _import_results = {}
@@ -14,18 +18,18 @@ _import_results = {}
 def check_and_import_optional(name: str, module_name: str, required: bool = False) -> Tuple[bool, Optional[object]]:
     """
     检查并导入可选依赖
-    
+
     Args:
         name: 依赖的名称（用于显示）
         module_name: 模块的实际名称
         required: 是否为必需依赖
-        
+
     Returns:
         (是否成功，导入的模块或 None)
     """
     if name in _import_results:
         return _import_results[name]
-    
+
     try:
         module = __import__(module_name, fromlist=[''])
         _import_results[name] = (True, module)
@@ -33,13 +37,13 @@ def check_and_import_optional(name: str, module_name: str, required: bool = Fals
     except ImportError as e:
         _import_results[name] = (False, None)
         if required:
-            print(f"[ERROR] 错误：缺少必需依赖 {name}")
-            print(f"   请运行：pip install {module_name}")
-            print(f"   详细错误：{e}")
+            logger.error('[ERROR] 错误：缺少必需依赖 %s', name)
+            logger.info('   请运行：pip install %s', module_name)
+            logger.info('   详细错误：%s', e)
             sys.exit(1)
         else:
-            print(f"[WARN]  警告：{name} 未安装，相关功能将不可用")
-            print(f"   如需使用，请运行：pip install {module_name}")
+            logger.warning('[WARN]  警告：%s 未安装，相关功能将不可用', name)
+            logger.info('   如需使用，请运行：pip install %s', module_name)
         return False, None
 
 
@@ -48,9 +52,9 @@ def get_pyarrow() -> Tuple[bool, Optional[object]]:
     return check_and_import_optional("PyArrow", "pyarrow", required=False)
 
 
-def get_lancedb() -> Tuple[bool, Optional[object]]:
-    """获取 lancedb 模块"""
-    return check_and_import_optional("LanceDB", "lancedb", required=False)
+def get_zvec() -> Tuple[bool, Optional[object]]:
+    """获取 zvec 模块（当前向量存储后端）"""
+    return check_and_import_optional("zvec", "zvec", required=False)
 
 
 def get_sentence_transformers() -> Tuple[bool, Optional[object]]:
@@ -66,34 +70,33 @@ def get_numpy() -> Tuple[bool, Optional[object]]:
 def check_memory_dependencies() -> bool:
     """
     检查记忆系统相关的所有依赖
-    
+
     Returns:
         是否所有依赖都可用
     """
-    pyarrow_ok, _ = get_pyarrow()
-    lancedb_ok, _ = get_lancedb()
+    zvec_ok, _ = get_zvec()
+    sentence_ok, _ = get_sentence_transformers()
     numpy_ok, _ = get_numpy()
-    
-    return pyarrow_ok and lancedb_ok and numpy_ok
+
+    return zvec_ok and sentence_ok and numpy_ok
 
 
 def print_dependency_status():
     """打印所有依赖的状态"""
-    print("\n📦 依赖状态检查:")
-    
+    logger.info('\n📦 依赖状态检查:')
+
     deps = [
-        ("PyArrow", get_pyarrow),
-        ("LanceDB", get_lancedb),
+        ("zvec", get_zvec),
         ("Sentence Transformers", get_sentence_transformers),
         ("NumPy", get_numpy),
     ]
-    
+
     all_ok = True
     for name, getter in deps:
         ok, _ = getter()
         status = "[OK]" if ok else "[ERROR]"
-        print(f"  {status} {name}")
+        logger.info('  %s %s', status, name)
         if not ok:
             all_ok = False
-    
+
     return all_ok

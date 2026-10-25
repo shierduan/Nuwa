@@ -1,0 +1,147 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nuwa-core"
+version = "0.2.0"
+description = "女娲（Nuwa）核心引擎：带 13 维情绪状态、黎曼语义场与梦境记忆巩固的类人 AI Agent 框架"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+authors = [{ name = "Nuwa Contributors" }]
+
+keywords = [
+    "ai-agent",
+    "memory-consolidation",
+    "riemannian-semantic-field",
+    "affective-computing",
+    "vector-search",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# 运行时依赖与 requirements.txt 保持单一事实来源：
+# 这里用 dynamic 引用 requirements.txt，避免两处版本漂移。
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+# 本地开发与质量门禁
+dev = [
+    "ruff>=0.6.0",
+    "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+# 完整部署（含 TTS / 监控）
+full = [
+    "edge-tts>=6.1.0",
+    "prometheus-client>=0.19.0",
+    "psutil>=5.9.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/shierduan/Nuwa"
+Documentation = "https://github.com/shierduan/Nuwa/blob/main/README.md"
+
+[tool.setuptools]
+packages = ["nuwa_core"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+# ---------------------------------------------------------------------------
+# Ruff：linter + formatter
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = [
+    "参考项目代码",
+    "examples",
+    "venv",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle 错误
+    "W",    # pycodestyle 警告
+    "F",    # pyflakes：未使用变量 / 未使用 import
+    "I",    # isort：import 排序
+    "B",    # flake8-bugbear：常见 bug 模式
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # 行宽由 formatter 处理，避免与中文注释冲突
+    "E722",   # 允许裸 except（历史代码，逐步收敛中）
+    "B008",   # 函数调用作默认值（部分依赖注入场景需要）
+    "SIM108", # 三元表达式可读性争议
+]
+# 说明：不启用 UP（pyupgrade）。本代码库统一使用 typing.Optional/Dict/List
+# 风格，与 Python 3.10+ 的 X | Y 语法混用会造成风格漂移。
+# 如需现代化，应在独立重构中全量替换，而非渐进混入。
+
+[tool.ruff.lint.per-file-ignores]
+# 测试与脚本允许 print 与宽松命名
+"test_*.py" = ["T201"]
+"*_test.py" = ["T201"]
+"diag_*.py" = ["T201"]
+
+# ---------------------------------------------------------------------------
+# mypy：渐进式类型检查
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+warn_unused_configs = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+show_error_codes = true
+pretty = true
+
+# 已迁移到结构化日志的核心模块强制更严格的检查
+[[tool.mypy.overrides]]
+module = "nuwa_core.logging_config"
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "nuwa_core.errors"
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "nuwa_core.identifiers"
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "nuwa_core.vector_store"
+disallow_untyped_defs = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

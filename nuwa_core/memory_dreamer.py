@@ -8,14 +8,19 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from .nuwa_state import NuwaState
 
 import numpy as np
-from sklearn.cluster import DBSCAN
 from scipy.spatial.distance import pdist, squareform
+from sklearn.cluster import DBSCAN
+
+from .logging_config import get_logger
+from .vector_store import MEMORY_TYPE_RAW, MEMORY_TYPE_SUMMARY
+
+logger = get_logger(__name__)
 
 
 class MemoryDreamer:
@@ -40,9 +45,9 @@ class MemoryDreamer:
 
     def start_dreaming(self, limit: int = MAX_MEMORIES):
         """启动做梦流程"""
-        raw_memories = self.memory_cortex.get_recent_memories(limit=limit, memory_type="raw")
+        raw_memories = self.memory_cortex.get_recent_memories(limit=limit, memory_type=MEMORY_TYPE_RAW)
         if not raw_memories:
-            print("🌙 [MemoryDreamer] 没有可整理的记忆。")
+            logger.info("没有可整理的记忆。")
             return
 
         # 语义垃圾回收：定义低质量回复关键词列表
@@ -70,16 +75,16 @@ class MemoryDreamer:
                 rec_id = record.get("id")
                 if rec_id:
                     semantic_gc_ids.append(rec_id)
-        
+
         # 执行语义垃圾回收
         if semantic_gc_ids:
             unique_gc_ids = sorted(set(semantic_gc_ids))
-            print(f"🌙 [MemoryDreamer] 语义垃圾回收：删除 {len(unique_gc_ids)} 条低质量记忆")
+            logger.info("语义垃圾回收：删除 %d 条低质量记忆", len(unique_gc_ids))
             try:
                 self.memory_cortex.delete_memories(unique_gc_ids)
-                print("🌙 [MemoryDreamer] 低质量记忆已清理。")
+                logger.debug("低质量记忆已清理。")
             except Exception as e:
-                print(f"🌙 [MemoryDreamer] 语义垃圾回收失败: {e}")
+                logger.exception("语义垃圾回收失败: %s", e)
 
         # 第二步：继续处理剩余记忆
         vectors = []
@@ -90,7 +95,7 @@ class MemoryDreamer:
             rec_id = record.get("id")
             if rec_id and rec_id in semantic_gc_ids:
                 continue
-                
+
             vec = record.get("vector")
             # 显式检查为空/None/长度为0
             if vec is None:
@@ -103,7 +108,7 @@ class MemoryDreamer:
             # 过滤包含 NaN / Inf 的向量，避免 DBSCAN 报错
             if not np.isfinite(arr).all():
                 text_preview = str(record.get("text", "")).replace("\n", " ")[:60]
-                print(f"🌙 [MemoryDreamer] 跳过包含 NaN/Inf 的向量记忆: {text_preview}...")
+                logger.debug("跳过包含 NaN/Inf 的向量记忆: %s", text_preview)
                 if rec_id:
                     bad_ids.append(rec_id)
                 continue
@@ -111,7 +116,7 @@ class MemoryDreamer:
             valid_records.append(record)
 
         if len(valid_records) < 2:
-            print("🌙 [MemoryDreamer] 记忆数量不足，跳过整理。")
+            logger.info("记忆数量不足，跳过整理。")
             return
 
         vectors = np.stack(vectors)
@@ -119,16 +124,16 @@ class MemoryDreamer:
         finite_mask = np.isfinite(vectors).all(axis=1)
         if not finite_mask.all():
             removed = int((~finite_mask).sum())
-            print(f"🌙 [MemoryDreamer] 发现 {removed} 条含 NaN/Inf 的向量，在聚类前丢弃。")
+            logger.info("发现 %d 条含 NaN/Inf 的向量，在聚类前丢弃。", removed)
             # 记录这些记录的 id，后续统一从记忆库中删除
-            for rec, keep in zip(valid_records, finite_mask):
+            for rec, keep in zip(valid_records, finite_mask, strict=False):
                 if not keep and rec.get("id"):
                     bad_ids.append(rec["id"])
             vectors = vectors[finite_mask]
-            valid_records = [rec for rec, keep in zip(valid_records, finite_mask) if keep]
+            valid_records = [rec for rec, keep in zip(valid_records, finite_mask, strict=False) if keep]
 
         if len(valid_records) < 2:
-            print("🌙 [MemoryDreamer] 清洗后记忆数量不足，跳过整理。")
+            logger.info("清洗后记忆数量不足，跳过整理。")
             return
 
         # 过滤掉范数为 0 的向量（纯零向量会在 cosine/距离计算中产生数值问题）
@@ -136,25 +141,25 @@ class MemoryDreamer:
         nonzero_mask = norms.squeeze(axis=1) > 0
         if not nonzero_mask.all():
             removed = int((~nonzero_mask).sum())
-            print(f"🌙 [MemoryDreamer] 发现 {removed} 条零向量，在聚类前丢弃。")
-            for rec, keep in zip(valid_records, nonzero_mask):
+            logger.info("发现 %d 条零向量，在聚类前丢弃。", removed)
+            for rec, keep in zip(valid_records, nonzero_mask, strict=False):
                 if not keep and rec.get("id"):
                     bad_ids.append(rec["id"])
             vectors = vectors[nonzero_mask]
-            valid_records = [rec for rec, keep in zip(valid_records, nonzero_mask) if keep]
+            valid_records = [rec for rec, keep in zip(valid_records, nonzero_mask, strict=False) if keep]
 
         # 如果本轮检测到了坏向量，直接从 LanceDB 中删除，避免污染后续检索
         if bad_ids:
             unique_bad_ids = sorted(set(bad_ids))
-            print(f"🌙 [MemoryDreamer] 本轮共检测到 {len(unique_bad_ids)} 条坏向量记忆，正在从记忆库中删除...")
+            logger.info("本轮共检测到 %d 条坏向量记忆，正在从记忆库中删除...", len(unique_bad_ids))
             try:
                 self.memory_cortex.delete_memories(unique_bad_ids)
-                print("🌙 [MemoryDreamer] 坏向量记忆已清理。")
+                logger.debug("坏向量记忆已清理。")
             except Exception as e:
-                print(f"🌙 [MemoryDreamer] 清理坏向量记忆失败: {e}")
+                logger.exception("清理坏向量记忆失败: %s", e)
 
         if len(valid_records) < 2:
-            print("🌙 [MemoryDreamer] 过滤零向量后记忆数量不足，跳过整理。")
+            logger.info("过滤零向量后记忆数量不足，跳过整理。")
             return
 
         norms = np.linalg.norm(vectors, axis=1, keepdims=True)
@@ -163,13 +168,13 @@ class MemoryDreamer:
         # 使用欧式距离而不是 cosine，避免在 pdist 内部再次对零向量做 0/0 归一化
         distance_matrix = squareform(pdist(normalized, metric="euclidean"))
         if not np.isfinite(distance_matrix).all():
-            print("🌙 [MemoryDreamer] 距离矩阵仍包含 NaN/Inf，放弃本轮整理以保证安全。")
+            logger.warning("距离矩阵仍包含 NaN/Inf，放弃本轮整理以保证安全。")
             return
         clustering = DBSCAN(metric="precomputed", eps=0.3, min_samples=2).fit(distance_matrix)
         labels = clustering.labels_
 
         unique_labels = set(labels)
-        print(f"🌙 [MemoryDreamer] 开始整理 {len(valid_records)} 条记忆，共 {len(unique_labels)} 个簇。")
+        logger.info("开始整理 %d 条记忆，共 %d 个簇。", len(valid_records), len(unique_labels))
 
         for label in unique_labels:
             indices = np.where(labels == label)[0]
@@ -182,7 +187,7 @@ class MemoryDreamer:
             elif 0.2 <= avg_score < 0.8:
                 self._handle_compression(cluster_records)
             else:
-                print(f"🌙 [MemoryDreamer] 铭刻高价值记忆簇 (score={avg_score:.2f})，保留 {len(cluster_records)} 条。")
+                logger.info("铭刻高价值记忆簇 (score=%.2f)，保留 %d 条。", avg_score, len(cluster_records))
 
     def _calculate_score(self, mem: Dict[str, Any]) -> float:
         """按照指定公式计算记忆得分"""
@@ -211,7 +216,7 @@ class MemoryDreamer:
         ids = [rec.get("id") for rec in records if rec.get("id")]
         if not ids:
             return
-        print(f"🌙 [MemoryDreamer] Forgetting noise memories ({len(ids)} 条)...")
+        logger.info("Forgetting noise memories (%d 条)...", len(ids))
         self.memory_cortex.delete_memories(ids)
 
     def _handle_compression(self, records: List[Dict[str, Any]]):
@@ -222,11 +227,11 @@ class MemoryDreamer:
             return
         summary, facts = self._summarize_cluster_texts(texts)
         if not summary:
-            print("🌙 [MemoryDreamer] 压缩失败，跳过。")
+            logger.warning("压缩失败，跳过。")
             return
         emotions = self._aggregate_emotions(records)
         metadata = {
-            "type": "summary",
+            "type": MEMORY_TYPE_SUMMARY,
             "importance": 1.0,
             "emotions": emotions,
             "access_count": 0,
@@ -234,7 +239,7 @@ class MemoryDreamer:
         self.memory_cortex.store_memory(summary, metadata=metadata)
         ids = [rec.get("id") for rec in records if rec.get("id")]
         self.memory_cortex.delete_memories(ids)
-        print(f"🌙 [MemoryDreamer] 压缩 {len(records)} 条记忆为摘要。")
+        logger.info("压缩 %d 条记忆为摘要。", len(records))
         self._record_fact_updates(facts)
 
     def _summarize_cluster_texts(self, texts: List[str]) -> Tuple[str, Dict[str, str]]:
@@ -265,7 +270,7 @@ class MemoryDreamer:
             summary, facts = self._parse_summary_and_facts(raw_content)
             return summary, facts
         except Exception as e:
-            print(f"🌙 [MemoryDreamer] 调用 LLM 总结失败: {e}")
+            logger.exception("调用 LLM 总结失败: %s", e)
             return texts[0][:300], {}
 
     def _parse_summary_and_facts(self, content: str) -> Tuple[str, Dict[str, str]]:
@@ -288,9 +293,9 @@ class MemoryDreamer:
         if not facts:
             return
         if not self.state_ref:
-            print("🌙 [MemoryDreamer] 无法写入事实账本（state 引用不存在）。")
+            logger.warning("无法写入事实账本（state 引用不存在）。")
             return
-        
+
         success_count = 0
         total = len(facts)
         for key, value in facts.items():
@@ -298,7 +303,7 @@ class MemoryDreamer:
                 continue
             if self.state_ref.update_fact(str(key), str(value), source="dream"):
                 success_count += 1
-        print(f"🌙 [MemoryDreamer] 尝试写入 {total} 条事实，成功 {success_count} 条（重复或冲突已忽略）。")
+        logger.info("尝试写入 %d 条事实，成功 %d 条（重复或冲突已忽略）。", total, success_count)
 
     def _aggregate_emotions(self, records: List[Dict[str, Any]]) -> Dict[str, float]:
         aggregated: Dict[str, List[float]] = {}
@@ -314,9 +319,9 @@ class MemoryDreamer:
     def evolve_character(self):
         """
         实现时间加权人格演化算法 (TWPE - Temporal Weighted Personality Evolution)
-        
+
         从历史记忆中提取不同时间段的特征，更新演化人格数据。
-        
+
         时间分桶逻辑（基于 time.time() - timestamp）：
         - bucket_1d: < 86400s (最近1天)
         - bucket_1m: < 30 * 86400s but > 1d (最近1个月，但超过1天)
@@ -324,40 +329,40 @@ class MemoryDreamer:
         - bucket_1y: > 90 * 86400s (超过3个月)
         """
         if not self.memory_cortex or not self.state_ref:
-            print("🌙 [MemoryDreamer] 无法执行人格演化：memory_cortex 或 state_ref 不存在")
+            logger.warning("无法执行人格演化：memory_cortex 或 state_ref 不存在")
             return
-        
+
         if not self.llm_client:
-            print("🌙 [MemoryDreamer] 无法执行人格演化：LLM 客户端不可用")
+            logger.warning("无法执行人格演化：LLM 客户端不可用")
             return
-        
+
         try:
             # 1. 获取最近的记忆
-            recent_memories = self.memory_cortex.get_recent_memories(limit=2000, memory_type="raw")
+            recent_memories = self.memory_cortex.get_recent_memories(limit=2000, memory_type=MEMORY_TYPE_RAW)
             if not recent_memories:
-                print("🌙 [MemoryDreamer] 没有记忆可用于人格演化")
+                logger.info("没有记忆可用于人格演化")
                 return
-            
+
             # 2. 按时间戳分组到4个时间段
             current_time = time.time()
             one_day_seconds = 86400
             one_month_seconds = 30 * 86400
             three_months_seconds = 90 * 86400
-            
+
             bucket_1d = []   # < 86400s
             bucket_1m = []   # < 30 * 86400s but > 1d
             bucket_3m = []   # < 90 * 86400s but > 1m
             bucket_1y = []   # > 90 * 86400s
-            
+
             # 将记忆分配到对应的时间桶
             for mem in recent_memories:
                 timestamp = float(mem.get("timestamp", current_time))
                 text = mem.get("text", "").strip()
                 if not text:
                     continue
-                
+
                 age_seconds = current_time - timestamp
-                
+
                 if age_seconds < one_day_seconds:
                     bucket_1d.append(text)
                 elif age_seconds < one_month_seconds:
@@ -366,7 +371,7 @@ class MemoryDreamer:
                     bucket_3m.append(text)
                 else:
                     bucket_1y.append(text)
-            
+
             # 3. 初始化演化人格数据
             current_persona = self.state_ref.evolved_persona.copy() if self.state_ref.evolved_persona else {}
             evolved_persona = {
@@ -382,7 +387,7 @@ class MemoryDreamer:
                 }),
                 "last_evolution_time": current_time,
             }
-            
+
             # 4. 处理 bucket_1d: Current Mood & Immediate Needs
             if bucket_1d:
                 try:
@@ -405,10 +410,10 @@ class MemoryDreamer:
                         max_tokens=128,
                     )
                     evolved_persona["short_term_vibe"] = response.choices[0].message.content.strip()
-                    print(f"🌙 [MemoryDreamer] 已提取1d特征: {len(bucket_1d)} 条记忆，采样 {len(sampled_texts)} 条")
+                    logger.debug("已提取1d特征: %d 条记忆，采样 %d 条", len(bucket_1d), len(sampled_texts))
                 except Exception as e:
-                    print(f"🌙 [MemoryDreamer] 提取1d特征失败: {e}")
-            
+                    logger.exception("提取1d特征失败: %s", e)
+
             # 5. 处理 bucket_1m: Recent Habits & Topics
             if bucket_1m:
                 try:
@@ -431,10 +436,10 @@ class MemoryDreamer:
                         max_tokens=128,
                     )
                     evolved_persona["recent_habits"] = response.choices[0].message.content.strip()
-                    print(f"🌙 [MemoryDreamer] 已提取1m特征: {len(bucket_1m)} 条记忆，采样 {len(sampled_texts)} 条")
+                    logger.debug("已提取1m特征: %d 条记忆，采样 %d 条", len(bucket_1m), len(sampled_texts))
                 except Exception as e:
-                    print(f"🌙 [MemoryDreamer] 提取1m特征失败: {e}")
-            
+                    logger.exception("提取1m特征失败: %s", e)
+
             # 6. 处理 bucket_3m: Relationship Definition
             if bucket_3m:
                 try:
@@ -457,10 +462,10 @@ class MemoryDreamer:
                         max_tokens=128,
                     )
                     evolved_persona["relationship_phase"] = response.choices[0].message.content.strip()
-                    print(f"🌙 [MemoryDreamer] 已提取3m特征: {len(bucket_3m)} 条记忆，采样 {len(sampled_texts)} 条")
+                    logger.debug("已提取3m特征: %d 条记忆，采样 %d 条", len(bucket_3m), len(sampled_texts))
                 except Exception as e:
-                    print(f"🌙 [MemoryDreamer] 提取3m特征失败: {e}")
-            
+                    logger.exception("提取3m特征失败: %s", e)
+
             # 7. 处理 bucket_1y: Core Shared Values
             if bucket_1y:
                 try:
@@ -483,21 +488,21 @@ class MemoryDreamer:
                         max_tokens=128,
                     )
                     evolved_persona["core_bond"] = response.choices[0].message.content.strip()
-                    print(f"🌙 [MemoryDreamer] 已提取1y特征: {len(bucket_1y)} 条记忆，采样 {len(sampled_texts)} 条")
+                    logger.debug("已提取1y特征: %d 条记忆，采样 %d 条", len(bucket_1y), len(sampled_texts))
                 except Exception as e:
-                    print(f"🌙 [MemoryDreamer] 提取1y特征失败: {e}")
-            
+                    logger.exception("提取1y特征失败: %s", e)
+
             # 8. 更新状态中的演化人格数据（线程安全）
             with self.state_ref._lock:
                 self.state_ref.evolved_persona.update(evolved_persona)
-            
+
             # 9. 输出统计信息
-            updated_dims = len([k for k, v in evolved_persona.items() 
+            updated_dims = len([k for k, v in evolved_persona.items()
                                if k not in ['last_evolution_time', 'weights'] and v])
-            print(f"🌙 [MemoryDreamer] 人格演化完成：更新了 {updated_dims} 个维度")
-            print(f"🌙 [MemoryDreamer] 时间分桶统计: 1d={len(bucket_1d)}, 1m={len(bucket_1m)}, 3m={len(bucket_3m)}, 1y={len(bucket_1y)}")
-            
+            logger.info("人格演化完成：更新了 %d 个维度", updated_dims)
+            logger.debug("时间分桶统计: 1d=%d, 1m=%d, 3m=%d, 1y=%d", len(bucket_1d), len(bucket_1m), len(bucket_3m), len(bucket_1y))
+
         except Exception as e:
-            print(f"🌙 [MemoryDreamer] 人格演化失败: {e}")
+            logger.exception("人格演化失败: %s", e)
             import traceback
             traceback.print_exc()

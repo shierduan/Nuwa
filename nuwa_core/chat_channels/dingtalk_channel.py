@@ -5,11 +5,11 @@
 """
 
 import logging
-import requests
 import time
-import hmac
-import hashlib
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import requests
+
 
 class DingTalkChannel:
     def __init__(self, config: Dict[str, Any]):
@@ -20,13 +20,13 @@ class DingTalkChannel:
         self.logger = logging.getLogger(__name__)
         self.access_token = None
         self.token_expire_time = 0
-    
+
     def _get_access_token(self) -> Optional[str]:
         """获取钉钉访问令牌"""
         current_time = time.time()
         if self.access_token and current_time < self.token_expire_time:
             return self.access_token
-        
+
         try:
             url = "https://oapi.dingtalk.com/gettoken"
             params = {
@@ -45,16 +45,16 @@ class DingTalkChannel:
         except Exception as e:
             self.logger.error(f"Error getting access token: {str(e)}")
             return None
-    
+
     def send_message(self, message: str, recipient: str) -> bool:
         """发送消息到钉钉"""
         access_token = self._get_access_token()
         if not access_token:
             return False
-        
+
         try:
             url = f"https://oapi.dingtalk.com/topapi/message/corpconversation/asyncsend_v2?access_token={access_token}"
-            
+
             # 构建消息体
             payload = {
                 "agent_id": self.agent_id,
@@ -66,7 +66,7 @@ class DingTalkChannel:
                     }
                 }
             }
-            
+
             response = requests.post(url, json=payload)
             data = response.json()
             if data.get('errcode') == 0:
@@ -78,7 +78,7 @@ class DingTalkChannel:
         except Exception as e:
             self.logger.error(f"Error sending message: {str(e)}")
             return False
-    
+
     def handle_message(self, message: Dict[str, Any]):
         """处理来自钉钉的消息"""
         try:
@@ -87,7 +87,7 @@ class DingTalkChannel:
             # 可以在这里添加消息处理逻辑，如解析消息内容、调用nuwa的其他模块等
         except Exception as e:
             self.logger.error(f"Error handling message: {str(e)}")
-    
+
     def probe(self) -> Dict[str, Any]:
         """探测钉钉连接状态"""
         access_token = self._get_access_token()
@@ -96,7 +96,7 @@ class DingTalkChannel:
                 "status": "error",
                 "message": "Failed to get access token"
             }
-        
+
         try:
             url = f"https://oapi.dingtalk.com/topapi/v2/user/get?access_token={access_token}"
             payload = {

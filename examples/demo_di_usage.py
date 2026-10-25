@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
 依赖注入架构使用示例
+[已废弃 DEPRECATED — 2026-10-25]
 
-演示如何使用新的依赖注入架构构建女娲AI应用
+KernelDI 已废弃，生产路径请改用 NuwaKernelAsync：
+
+    from nuwa_core import NuwaKernel
+
+本示例仅为历史兼容保留，演示如何使用依赖注入容器与配置中心。
 """
 
 import asyncio

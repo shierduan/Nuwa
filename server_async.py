@@ -30,6 +30,11 @@ connected_clients = set()
 # 状态同步间隔（秒）
 STATUS_SYNC_INTERVAL = 30.0
 
+# WebSocket 监听地址与端口（支持环境变量覆盖，便于 Docker 部署）
+# 安全默认仅监听本机；容器内通过 docker-compose 设置 NUWA_WS_HOST=0.0.0.0
+WS_HOST = os.environ.get("NUWA_WS_HOST", "127.0.0.1")
+WS_PORT = int(os.environ.get("NUWA_WS_PORT", "8766"))
+
 
 def print_monitor_snapshot(state):
     """打印详细的状态监控信息"""
@@ -88,17 +93,23 @@ print("=" * 60)
 print("Rocket Launching NuwaKernel (WebSocket Server - Unified Async Architecture)")
 print("=" * 60)
 
+# 从配置文件加载 LLM 设置
+from nuwa_core.config_manager import NuwaConfig
+config = NuwaConfig.from_file("config/config.yaml")
+
 kernel = NuwaKernelAsync(
-    project_name="nuwa",
-    data_dir="data",
-    base_url="http://127.0.0.1:1234/v1",
-    api_key="lm-studio",
-    model_name="local-model",
+    project_name=config.project_name,
+    data_dir=config.data_dir,
+    base_url=config.llm_base_url,
+    api_key=config.llm_api_key,
+    model_name=config.llm_model_name,
     on_message_callback=handle_active_message,
-    enable_cache=True,
-    cache_ttl=300,
+    enable_cache=config.cache_enabled,
+    cache_ttl=config.cache_ttl,
     enable_live2d=False,  # 默认禁用Live2D
 )
+
+print(f"[OK] LLM 配置加载: {config.llm_base_url} | 模型: {config.llm_model_name}")
 
 print("[OK] Nuwa Kernel initialized")
 
@@ -192,12 +203,6 @@ async def handle_client(websocket):
                     await websocket.send(json.dumps(test_response))
                     continue
                 
-                    continue
-                
-                    }
-                    await websocket.send(json.dumps(response_data))
-                    continue
-                
                 # 处理Live2D配置请求
                 if data.get("type") == "live2d_config":
                     live2d_enabled = data.get("enabled", False)
@@ -225,12 +230,6 @@ async def handle_client(websocket):
                         "status": live2d_status
                     }
                     await websocket.send(json.dumps(response_data))
-                    continue
-                
-                # 处理音频播放完成确认（前端反馈）
-                if data.get("type") == "audio_played":
-                    audio_text = data.get("text", "")
-                    if audio_text:
                     continue
                 
                 # 处理文本消息（使用流式响应）
@@ -361,17 +360,72 @@ async def main():
     # 启动心跳循环（必须在事件循环运行后调用）
     kernel.start_heartbeat()
     print("💓 心跳循环已启动")
-    
+
+    # 启动梦境调度器：空闲时自动做梦（整理记忆 / 巩固人格 / 提炼洞察）
+    try:
+        await kernel.start_dream_scheduler()
+    except Exception as e:
+        print(f"[WARN] 梦境调度器启动失败: {e}")
+
+    # 启动监控指标服务（与控制台入口保持一致，确保健康检查与 Prometheus 抓取可用）
+    try:
+        from nuwa_core.metrics_collector import init_metrics_collector, MetricsConfig
+
+        init_metrics_collector(
+            MetricsConfig(http_port=int(os.environ.get("NUWA_METRICS_PORT", "8080")))
+        )
+    except Exception as e:
+        print(f"[WARN] 指标服务启动失败: {e}")
+
     # Start WebSocket server
-    server = await websockets.serve(handle_client, "127.0.0.1", 8766)
-    print("[START] WebSocket server started on ws://127.0.0.1:8766")
+    server = await websockets.serve(handle_client, WS_HOST, WS_PORT)
+    print(f"[START] WebSocket server started on ws://{WS_HOST}:{WS_PORT}")
     print("=" * 60)
-    
+
+    # ==================== 飞书渠道集成 ====================
+    # 采用 WebSocket 长连接模式：无需公网 IP / 回调地址，适合本地调试
+    try:
+        channels = getattr(config, "channels", None) or {}
+        feishu_cfg = channels.get("feishu", {}) or {}
+        app_id = str(feishu_cfg.get("appId", "")).strip()
+        app_secret = str(feishu_cfg.get("appSecret", "")).strip()
+        enabled = bool(feishu_cfg.get("enabled", False))
+
+        if not enabled:
+            print("[INFO] 飞书渠道未启用 (channels.feishu.enabled: false)")
+        elif (not app_id or not app_secret
+              or app_id.startswith("YOUR_") or app_secret.startswith("YOUR_")):
+            print("[WARN] 飞书渠道已启用，但 appId/appSecret 仍是占位符，跳过连接")
+            print("       请在 config/config.yaml 的 channels.feishu 填入真实凭据")
+        else:
+            from nuwa_core.chat_channels.feishu_channel import FeishuChannel
+            feishu = FeishuChannel(feishu_cfg, kernel=kernel)
+            # 注入主事件循环，使飞书线程可安全回调内核协程
+            feishu.set_event_loop(asyncio.get_running_loop())
+            if feishu.start_ws_client():
+                print(f"[OK] 飞书长连接已启动 (bot: {feishu_cfg.get('botName', '女娲')})")
+            else:
+                print("[WARN] 飞书长连接启动失败，请检查凭据与网络")
+    except Exception as e:
+        print(f"[WARN] 飞书渠道初始化异常: {e}")
+
     # 使用 asyncio.gather 同时运行多个协程
-    await asyncio.gather(
-        broadcast_status_update(),
-        server.wait_closed()
-    )
+    try:
+        await asyncio.gather(
+            broadcast_status_update(),
+            server.wait_closed()
+        )
+    finally:
+        # 停止梦境调度器并保存状态
+        try:
+            await kernel.stop_dream_scheduler()
+        except Exception:
+            pass
+        try:
+            if kernel.state:
+                kernel.state.save()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

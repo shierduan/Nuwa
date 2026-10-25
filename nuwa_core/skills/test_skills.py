@@ -6,20 +6,25 @@ import unittest
 # 添加skills目录到Python路径
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from skill_types import SkillCard, SkillEntry, SkillCommandSpec
-from frontmatter import parse_frontmatter, resolve_open_claw_metadata, resolve_skill_invocation_policy
+from frontmatter import (
+    parse_frontmatter,
+    resolve_open_claw_metadata,
+    resolve_skill_invocation_policy,
+)
+from skill_types import SkillCard
 from workspace import (
-    compact_skill_paths,
-    sanitize_skill_command_name,
-    resolve_unique_skill_command_name,
     build_workspace_skill_cards,
     build_workspace_skill_cards_by_category,
-    build_workspace_skill_command_specs
+    build_workspace_skill_command_specs,
+    compact_skill_paths,
+    resolve_unique_skill_command_name,
+    sanitize_skill_command_name,
 )
+
 
 class TestSkillCardMechanism(unittest.TestCase):
     """测试技能卡机制"""
-    
+
     def test_skill_card_creation(self):
         """测试技能卡创建"""
         card = SkillCard(
@@ -42,7 +47,7 @@ class TestSkillCardMechanism(unittest.TestCase):
         self.assertEqual(card.tags, ["test", "example"])
         self.assertEqual(card.color, "#ff0000")
         self.assertEqual(card.background_color, "#00ff00")
-    
+
     def test_parse_frontmatter(self):
         """测试frontmatter解析"""
         content = """
@@ -62,7 +67,7 @@ Skill content here
         self.assertEqual(frontmatter.get("emoji"), "🔧")
         self.assertEqual(frontmatter.get("card-category"), "Testing")
         self.assertEqual(frontmatter.get("card-tags"), "test, example")
-    
+
     def test_resolve_open_claw_metadata(self):
         """测试OpenClaw技能元数据解析"""
         frontmatter = {
@@ -76,7 +81,7 @@ Skill content here
         self.assertEqual(metadata.emoji, "🔧")
         self.assertEqual(metadata.card.get("category"), "Testing")
         self.assertEqual(metadata.card.get("tags"), ["test", "example"])
-    
+
     def test_resolve_skill_invocation_policy(self):
         """测试技能调用策略解析"""
         frontmatter = {
@@ -87,7 +92,7 @@ Skill content here
         self.assertIsNotNone(policy)
         self.assertTrue(policy.user_invocable)
         self.assertFalse(policy.disable_model_invocation)
-    
+
     def test_compact_skill_paths(self):
         """测试技能路径压缩"""
         home = os.path.expanduser("~")
@@ -96,7 +101,7 @@ Skill content here
         ]
         compacted = compact_skill_paths(skills)
         self.assertTrue(compacted[0]["filePath"].startswith("~/"))
-    
+
     def test_sanitize_skill_command_name(self):
         """测试技能命令名称清理"""
         test_cases = [
@@ -109,13 +114,13 @@ Skill content here
         for input_name, expected in test_cases:
             result = sanitize_skill_command_name(input_name)
             self.assertEqual(result, expected)
-    
+
     def test_resolve_unique_skill_command_name(self):
         """测试解析唯一的技能命令名称"""
-        used = set(["test_skill"])
+        used = {"test_skill"}
         result = resolve_unique_skill_command_name("test_skill", used)
         self.assertEqual(result, "test_skill_2")
-    
+
     def test_build_workspace_skill_cards(self):
         """测试构建工作区技能卡"""
         # 创建临时目录
@@ -136,11 +141,11 @@ card-tags: test, example
 
 Skill content here
 """)
-            
+
             # 测试构建技能卡
             cards = build_workspace_skill_cards(temp_dir)
             self.assertEqual(len(cards), 0)  # 因为load_skillsFromDir未实现，所以返回空列表
-    
+
     def test_build_workspace_skill_cards_by_category(self):
         """测试按类别构建工作区技能卡"""
         # 创建临时目录
@@ -148,7 +153,7 @@ Skill content here
             # 测试按类别构建技能卡
             categories = build_workspace_skill_cards_by_category(temp_dir)
             self.assertEqual(len(categories), 0)  # 因为load_skillsFromDir未实现，所以返回空字典
-    
+
     def test_build_workspace_skill_command_specs(self):
         """测试构建工作区技能命令规范"""
         # 创建临时目录

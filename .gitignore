@@ -53,9 +53,21 @@ delete_memories.py
 # Windows系统文件
 Thumbs.db
 
-# 模型文件 - 已分离到 123 项目
-# models/
-# examples/
+# 模型文件 - 本地下载的 embedding 模型，体积大，运行时应按需下载，不入库
+models/
+
+# 本地配置（含真实 API 密钥，勿提交；保留 config.yaml 作为默认模板）
+config/config.local.yaml
+
+# 运行时锁文件
+nuwa.lock
+.clawhub/
+
+# 工具缓存
+.ruff_cache/
+
+# 日志目录
+logs/
 
 # 其他
 *.zip

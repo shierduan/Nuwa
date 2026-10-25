@@ -44,19 +44,16 @@ def check_http_endpoint(url: str, timeout: int = TIMEOUT) -> bool:
         return False
 
 
+def check_websocket_port() -> bool:
+    """检查 WebSocket 服务端口（server_async.py 默认 8766）"""
+    ws_port = int(os.environ.get("NUWA_WS_PORT", "8766"))
+    return check_tcp_port("127.0.0.1", ws_port)
+
+
 def check_metrics_endpoint() -> bool:
-    """检查监控指标端点"""
-    return check_http_endpoint("http://localhost:8080/metrics")
-
-
-def check_health_endpoint() -> bool:
-    """检查健康检查端点"""
-    return check_http_endpoint("http://localhost:8000/health")
-
-
-def check_readiness_endpoint() -> bool:
-    """检查就绪端点"""
-    return check_http_endpoint("http://localhost:8000/ready")
+    """检查监控指标端点（JSON 格式，默认 8080）"""
+    metrics_port = os.environ.get("NUWA_METRICS_PORT", "8080")
+    return check_http_endpoint(f"http://127.0.0.1:{metrics_port}/metrics")
 
 
 def check_memory_usage() -> bool:
@@ -84,10 +81,14 @@ def check_memory_usage() -> bool:
 def check_python_environment() -> bool:
     """检查Python环境"""
     try:
-        # 检查必要模块
+        # 检查必要模块（torch 为可选依赖，缺失不算不健康）
         import numpy
-        import torch
-        
+
+        try:
+            import torch  # noqa: F401
+        except ImportError:
+            print("⚠️  torch 不可用（可选依赖），语义向量功能可能受限")
+
         # 简单的导入测试
         from nuwa_core.nuwa_state import NuwaState
         from nuwa_core.riemannian_semantic_field import RigorousSemanticField
@@ -130,14 +131,10 @@ def perform_comprehensive_check() -> bool:
         ("Python环境", check_python_environment),
         ("内存使用", check_memory_usage),
         ("磁盘空间", check_disk_space),
-        ("HTTP端点", check_health_endpoint),
+        ("WebSocket端口", check_websocket_port),
         ("指标端点", check_metrics_endpoint),
         ("数据库连接", check_database_connections),
     ]
-    
-    # 只有当服务启动后才检查HTTP端点
-    if check_tcp_port("localhost", 8000):
-        checks.append(("就绪状态", check_readiness_endpoint))
     
     results = []
     

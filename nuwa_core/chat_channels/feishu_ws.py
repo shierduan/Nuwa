@@ -2,14 +2,16 @@
 飞书长连接客户端
 """
 
+import contextlib
+import json
 import logging
+import os
+import queue
 import subprocess
 import sys
-import os
-import json
 import threading
-import queue
 import time
+
 
 class FeishuWSClient:
     def __init__(self, app_id: str, app_secret: str, message_handler=None):
@@ -20,7 +22,7 @@ class FeishuWSClient:
         self.message_queue = queue.Queue()
         self.running = False
         self.process = None
-    
+
     def _process_messages(self):
         """处理从子进程接收的消息"""
         while self.running:
@@ -34,7 +36,7 @@ class FeishuWSClient:
                 self.logger.error(f"处理消息失败: {e}")
                 import traceback
                 self.logger.error(f"Traceback: {traceback.format_exc()}")
-    
+
     def start(self):
         """启动长连接客户端"""
         try:
@@ -42,7 +44,7 @@ class FeishuWSClient:
             self.logger.info("启动飞书长连接客户端...")
             self.logger.info(f"使用App ID: {self.app_id}")
             self.logger.info(f"Python 解释器: {sys.executable}")
-            
+
             # 创建一个独立的脚本文件来运行WebSocket客户端
             script_content = '''#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -78,7 +80,7 @@ logger = logging.getLogger("FeishuWSClient")
 class FeishuEventHandler:
     def __init__(self):
         pass
-    
+
     def handle(self, event):
         """处理事件 - 飞书 SDK 标准接口"""
         logger.info("收到飞书事件")
@@ -86,7 +88,7 @@ class FeishuEventHandler:
         try:
             # 解析事件 - 飞书 SDK 可能传递的是一个对象
             event_data = {}
-            
+
             # 尝试不同的方式获取事件数据
             if hasattr(event, 'dict'):
                 # 如果是 SDK 对象，使用 dict() 方法
@@ -100,14 +102,14 @@ class FeishuEventHandler:
             else:
                 # 其他格式，尝试转换
                 event_data = json.loads(str(event))
-            
+
             logger.info(f"事件数据类型: {type(event_data)}")
             logger.info(f"事件数据: {event_data}")
-            
+
             # 检查事件类型
             event_type = event_data.get('header', {}).get('event_type', '')
             logger.info(f"事件类型: {event_type}")
-            
+
             # 只处理消息事件
             if event_type == 'im.message.receive_v1':
                 logger.info(f"处理消息事件")
@@ -122,12 +124,21 @@ class FeishuEventHandler:
             logger.error(f"处理事件失败: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-        
+
         # 返回正确的响应格式，告诉飞书事件已处理
         return {"status": "success"}
-    
+
     def do_without_validation(self, event):
-        """处理事件（无验证模式）- 兼容新版本SDK"""
+        """处理事件（无验证模式）- 兼容旧版本SDK"""
+        return self.handle(event)
+
+    def _do_without_validation(self, event):
+        """处理事件（无验证模式）- 兼容新版本SDK (lark-oapi >= 1.5)
+
+        新版 SDK 内部调用的是带下划线前缀的私有方法：
+            lark_oapi/ws/client.py -> self._event_handler._do_without_validation(pl)
+        若只定义无下划线版本，会抛 AttributeError，导致消息收到却无法回复。
+        """
         return self.handle(event)
 
 def main():
@@ -136,14 +147,14 @@ def main():
     logger.info(f"Python 版本: {sys.version}")
     logger.info(f"App ID: {sys.argv[1]}")
     logger.info("=" * 50)
-    
+
     if len(sys.argv) < 3:
         logger.error("缺少必要的参数: app_id 和 app_secret")
         sys.exit(1)
-    
+
     app_id = sys.argv[1]
     app_secret = sys.argv[2]
-    
+
     try:
         # 运行客户端
         logger.info("正在初始化飞书 WebSocket 客户端...")
@@ -153,12 +164,12 @@ def main():
             log_level=lark.LogLevel.DEBUG,
             event_handler=FeishuEventHandler()
         )
-        
+
         logger.info("飞书客户端初始化完成，开始连接...")
-        
+
         # 启动客户端 - 这是阻塞调用
         client.start()
-        
+
     except Exception as e:
         logger.error(f"飞书客户端运行错误: {e}")
         import traceback
@@ -168,24 +179,24 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-            
+
             # 保存脚本到临时文件
             script_path = os.path.join(os.path.dirname(__file__), "feishu_ws_client.py")
             with open(script_path, "w", encoding="utf-8") as f:
                 f.write(script_content)
-            
+
             self.logger.info(f"子进程脚本已保存: {script_path}")
-            
+
             # 启动消息处理线程
             self.running = True
             message_thread = threading.Thread(target=self._process_messages, daemon=True)
             message_thread.start()
-            
+
             # 设置环境变量，确保子进程使用 UTF-8
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
             env['PYTHONUTF8'] = '1'
-            
+
             # 在新的进程中运行脚本，使用二进制模式读取输出以避免编码问题
             self.process = subprocess.Popen(
                 [sys.executable, "-u", script_path, self.app_id, self.app_secret],
@@ -193,9 +204,9 @@ if __name__ == "__main__":
                 stderr=subprocess.STDOUT,
                 env=env
             )
-            
+
             self.logger.info(f"飞书长连接客户端进程已启动，PID: {self.process.pid}")
-            
+
             # 等待一小段时间，检查进程是否立即退出
             time.sleep(2)
             if self.process.poll() is not None:
@@ -208,7 +219,7 @@ if __name__ == "__main__":
                 except:
                     pass
                 return False
-            
+
             # 读取子进程的输出（处理 Windows 编码问题）
             def read_output():
                 try:
@@ -223,19 +234,19 @@ if __name__ == "__main__":
                                     break
                                 except (UnicodeDecodeError, LookupError):
                                     continue
-                            
+
                             if line is None:
                                 # 所有编码都失败，使用替换字符
                                 line = raw_line.decode('utf-8', errors='replace')
-                            
+
                             line = line.strip()
-                            
+
                             if line.startswith('@NUWA_MESSAGE:'):
                                 # 提取消息内容
                                 message_data = line[len('@NUWA_MESSAGE:'):].strip()
                                 try:
                                     event = json.loads(message_data)
-                                    self.logger.info(f"收到消息事件，加入队列")
+                                    self.logger.info("收到消息事件，加入队列")
                                     self.message_queue.put(event)
                                 except json.JSONDecodeError as e:
                                     self.logger.error(f"解析消息失败: {message_data}, 错误: {e}")
@@ -243,6 +254,9 @@ if __name__ == "__main__":
                                 # 打印其他输出
                                 if line:  # 只记录非空行
                                     self.logger.info(f"[Feishu WS Subprocess] {line}")
+                                    # 同步输出到标准输出：主进程未配置 logging 时仍可观测连接状态
+                                    with contextlib.suppress(Exception):
+                                        print(f"[Feishu WS] {line}", flush=True)
                         except Exception as e:
                             self.logger.error(f"处理输出行时出错: {e}")
                             continue
@@ -250,11 +264,11 @@ if __name__ == "__main__":
                     self.logger.error(f"读取子进程输出时出错: {e}")
                     import traceback
                     self.logger.error(f"Traceback: {traceback.format_exc()}")
-            
+
             # 启动输出读取线程
             output_thread = threading.Thread(target=read_output, daemon=True)
             output_thread.start()
-            
+
             # 启动进程监控线程
             def monitor_process():
                 while self.running:
@@ -268,7 +282,7 @@ if __name__ == "__main__":
                             env = os.environ.copy()
                             env['PYTHONIOENCODING'] = 'utf-8'
                             env['PYTHONUTF8'] = '1'
-                            
+
                             # 重新启动进程
                             self.process = subprocess.Popen(
                                 [sys.executable, "-u", script_path, self.app_id, self.app_secret],
@@ -276,22 +290,22 @@ if __name__ == "__main__":
                                 stderr=subprocess.STDOUT,
                                 env=env
                             )
-                            
+
                             self.logger.info(f"飞书长连接客户端已重新启动，新PID: {self.process.pid}")
-                            
+
                             # 重新启动输出读取线程
                             new_output_thread = threading.Thread(target=read_output, daemon=True)
                             new_output_thread.start()
-                            
+
                         except Exception as e:
                             self.logger.error(f"重新启动飞书长连接客户端失败: {e}")
                             import traceback
                             self.logger.error(f"Traceback: {traceback.format_exc()}")
-            
+
             # 启动进程监控线程
             monitor_thread = threading.Thread(target=monitor_process, daemon=True)
             monitor_thread.start()
-            
+
             self.logger.info("飞书长连接客户端已在新进程中启动")
             return True
         except Exception as e:
@@ -300,12 +314,12 @@ if __name__ == "__main__":
             import traceback
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             return False
-    
+
     def stop(self):
         """停止长连接客户端"""
         self.logger.info("正在停止飞书长连接客户端...")
         self.running = False
-        
+
         if self.process:
             try:
                 self.process.terminate()

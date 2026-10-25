@@ -11,15 +11,13 @@ rule_files:
   - "rules/*.yml"
 
 scrape_configs:
-  # 女娲核心服务指标
+  # 女娲核心服务指标（Prometheus 格式，由 metrics_collector 在 http_port+1 提供）
   - job_name: 'nuwa-core'
     static_configs:
-      - targets: ['nuwa-core:8080']
+      - targets: ['nuwa-core:8081']
     metrics_path: '/metrics'
     scrape_interval: 10s
     scrape_timeout: 5s
-    params:
-      format: ['prometheus']
 
   # Prometheus自身监控
   - job_name: 'prometheus'

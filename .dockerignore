@@ -1,0 +1,37 @@
+# 版本控制与 CI
+.git
+.gitignore
+.github
+
+# Python 缓存与虚拟环境
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 运行时数据（由 volume 挂载，Dockerfile 会创建空目录）
+data/
+logs/
+.clawhub/
+
+# 第三方参考代码副本（不参与镜像构建）
+参考项目代码/
+
+# 锁文件与临时文件
+*.lock
+package-lock.json
+*.tmp
+*.bak
+
+# 本地文档与示例（镜像内不需要）
+docs/
+examples/
+tests/
+monitoring/
+management-scripts/
+
+# Docker 自身文件
+.dockerignore
+Dockerfile
+docker-compose.yml

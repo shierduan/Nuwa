@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    name: Ruff Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff>=0.6.0
+
+      - name: Run ruff check
+        run: ruff check nuwa_core/
+
+      - name: Run ruff format check
+        run: ruff format --check nuwa_core/logging_config.py nuwa_core/errors.py nuwa_core/identifiers.py
+
+  syntax:
+    name: Syntax & Import
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install core deps
+        run: |
+          pip install numpy networkx
+
+      - name: Compile all sources
+        run: python -m compileall -q nuwa_core/
+
+      - name: Verify package import
+        run: python -c "import nuwa_core; from nuwa_core import NuwaKernel; print('import ok')"
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install numpy scipy networkx scikit-learn
+          pip install sentence-transformers
+          pip install zvec pytest pytest-asyncio
+
+      - name: Run memory subsystem tests
+        # 这些测试不依赖外部 LLM，可在 CI 中稳定运行
+        run: |
+          python test_zvec_e2e.py
+          python test_zvec_restart.py
+          python test_consolidation.py
+          python test_dream_e2e.py

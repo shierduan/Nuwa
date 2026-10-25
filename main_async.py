@@ -164,6 +164,10 @@ class NuwaConsoleAsync:
                 enable_live2d=False,  # 默认禁用 Live2D
                 max_tokens=config.llm_max_tokens,
             )
+
+            # 绑定宿主事件循环给同步兼容层（做梦流程在工作线程中调用同步 LLM）
+            if self.kernel.sync_client and hasattr(self.kernel.sync_client, "set_loop"):
+                self.kernel.sync_client.set_loop(asyncio.get_running_loop())
             
             # 初始化飞书渠道
             try:

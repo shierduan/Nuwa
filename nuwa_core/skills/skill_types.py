@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Union
 
+
 class SkillInstallSpec:
     def __init__(self,
                  id: Optional[str] = None,

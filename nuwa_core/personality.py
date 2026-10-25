@@ -13,19 +13,23 @@ import json
 import os
 from datetime import datetime
 
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class Personality:
     """
     女娲人格管理类
-    
+
     管理女娲的人格信息，包括初始设定和演化后的人格。
     支持加载和保存人格设定，便于调试和演化。
     """
-    
+
     def __init__(self, data_dir: str = "data", project_name: str = "nuwa"):
         """
         初始化人格管理类
-        
+
         Args:
             data_dir: 数据目录
             project_name: 项目名称
@@ -33,7 +37,7 @@ class Personality:
         self.data_dir = data_dir
         self.project_name = project_name
         self.personality_file_path = os.path.join(data_dir, project_name, "personality.json")
-        
+
         # 初始人格设定（保留原有的提示词设定）
         self.initial_personality = {
             "role_definition": """<role_definition>
@@ -60,7 +64,7 @@ class Personality:
 4. COLD WAR (Disappointment): 当 Sadness > 0.5 且 Trust < 0.2 持续5秒以上。
    表现：冷暴力。回复极短（"哦"、"随便"），拒绝情感交流。
 </role_definition>""",
-            
+
             "response_protocol": """<response_protocol>
 **强制要求：你必须使用双标签输出格式，严格分离"思维"和"言语"。**
 
@@ -98,7 +102,7 @@ class Personality:
    - 示例：<fact_update>{{"user_name": "十二", "code_style": "pythonic"}}</fact_update>
    - 事实一旦写入 fact_book，就视为你真正记得的内容，除非用户主动提出疑问，否则不要再向用户确认或追问这些事实。
 </response_protocol>""",
-            
+
             "memory_protocol": """<memory_protocol>
 检索到的记忆片段可能包含你过去的“错误回答”或“道歉”。
 
@@ -107,7 +111,7 @@ class Personality:
 2. 如果记忆中包含 **你过去的道歉或说“记不清/不知道”**（例如：“我不记得了”、“我的记忆还在学习中”），请**彻底忽略**这些负面样本，不要复读这些错误回答。
 3. 当你根据记忆回答问题时，行为表现为“你一直记得”，不要说“我查了一下数据库”或“我刚刚检索了一下记忆”，而是自然地给出答案。
 </memory_protocol>""",
-            
+
             "style_guide": """<style_guide>
 Correct Format (Chat):
 <thought>
@@ -121,14 +125,14 @@ Incorrect Format (Novel):
 *我看着他疲惫的脸，心中涌起一股暖流* "你今天工作很久了吗？"
 </style_guide>"""
         }
-        
+
         # 加载已保存的人格设定（如果存在）
         self.load_personality()
-    
+
     def load_personality(self) -> bool:
         """
         加载已保存的人格设定
-        
+
         Returns:
             是否加载成功
         """
@@ -136,55 +140,55 @@ Incorrect Format (Novel):
             try:
                 with open(self.personality_file_path, "r", encoding="utf-8") as f:
                     saved_personality = json.load(f)
-                
+
                 # 更新初始人格设定（如果有）
                 if "initial_personality" in saved_personality:
                     self.initial_personality.update(saved_personality["initial_personality"])
-                
+
                 return True
             except (json.JSONDecodeError, IOError) as e:
-                print(f"[WARN] 加载人格设定失败: {e}")
+                logger.warning('[WARN] 加载人格设定失败: %s', e)
         return False
-    
+
     def save_personality(self) -> bool:
         """
         保存人格设定到文件
-        
+
         Returns:
             是否保存成功
         """
         try:
             # 确保目录存在
             os.makedirs(os.path.dirname(self.personality_file_path), exist_ok=True)
-            
+
             # 构建保存的数据（只保存初始人格设定）
             personality_data = {
                 "initial_personality": self.initial_personality,
                 "last_updated": datetime.now().isoformat()
             }
-            
+
             # 保存到文件
             with open(self.personality_file_path, "w", encoding="utf-8") as f:
                 json.dump(personality_data, f, ensure_ascii=False, indent=2)
-            
+
             return True
         except IOError as e:
-            print(f"[WARN] 保存人格设定失败: {e}")
+            logger.warning('[WARN] 保存人格设定失败: %s', e)
             return False
-    
+
     def build_system_prompt(self, evolved_persona_block: str = "") -> str:
         """
         构建系统提示词
-        
+
         Args:
             evolved_persona_block: 演化人格块（由自我进化状态模块提供）
-        
+
         Returns:
             系统提示词文本
         """
         # 获取当前时间作为参考时间
         current_time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+
         return f"""{evolved_persona_block}
 {self.initial_personality['role_definition']}
 
@@ -197,11 +201,11 @@ Incorrect Format (Novel):
 {self.initial_personality['memory_protocol']}
 
 {self.initial_personality['style_guide']}"""
-    
+
     def get_initial_personality(self) -> dict:
         """
         获取初始人格设定
-        
+
         Returns:
             初始人格设定字典
         """

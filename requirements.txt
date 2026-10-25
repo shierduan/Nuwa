@@ -5,6 +5,19 @@ numpy>=1.24.0
 scipy>=1.10.0
 sentence-transformers>=2.2.0
 
+# PyTorch：sentence-transformers 会自动拉取，但最新版(2.14)在部分 Windows 环境
+# 会抛 [WinError 1114] 加载 c10.dll 失败。Windows 建议显式安装 CPU 版：
+#   pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
+#       --index-url https://download.pytorch.org/whl/cpu
+# 若 sentence-transformers 自动安装的版本可用，则无需下面这行。
+# torch>=2.2.0
+
+# 图记忆（memory_graph.py 的图算法依赖，此前遗漏声明导致干净环境导入即崩）
+networkx>=3.0
+
+# 记忆做梦聚类（memory_dreamer.py 硬依赖，此前遗漏声明）
+scikit-learn>=1.3.0
+
 # 异步框架
 aiohttp>=3.8.0
 websockets>=11.0.0
@@ -53,9 +66,8 @@ openai>=1.0.0
 # aiosqlite>=0.18.0
 
 # 向量数据库（记忆存储 - 必需）
-pyarrow>=12.0.0
-lancedb>=0.5.0
-pandas>=2.0.0
+# zvec：阿里 Proxima 引擎，进程内嵌入式向量库（类 SQLite），零外部服务
+zvec>=0.8.0
 
 # 可选：可视化
 # matplotlib>=3.7.0

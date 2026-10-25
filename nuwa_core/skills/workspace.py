@@ -1,11 +1,16 @@
 import os
 import re
-import json
+import shutil
 from typing import Any, Dict, List, Optional, Set
-from .skill_types import SkillEntry, SkillCard, SkillSnapshot, SkillEligibilityContext
-from .frontmatter import parse_frontmatter, resolve_open_claw_metadata, resolve_skill_invocation_policy
-from .clawhub import search_skills, install_skill, uninstall_skill, list_skills, update_skill
+
 from .agent_skills import AgentSkill
+from .clawhub import install_skill, list_skills, search_skills, uninstall_skill, update_skill
+from .frontmatter import (
+    parse_frontmatter,
+    resolve_open_claw_metadata,
+    resolve_skill_invocation_policy,
+)
+from .skill_types import SkillCard, SkillEligibilityContext, SkillEntry, SkillSnapshot
 
 # 常量定义
 SKILL_COMMAND_MAX_LENGTH = 32
@@ -93,12 +98,12 @@ def resolve_nested_skills_root(dir_path: str, opts: Optional[Dict] = None) -> Di
             return {'baseDir': dir_path}
     except:
         return {'baseDir': dir_path}
-    
+
     # 启发式：如果存在dir/skills/*/SKILL.md，则将dir/skills视为真正的根目录
     nested_dirs = list_child_directories(nested)
     scan_limit = max(0, opts.get('maxEntriesToScan', 100) if opts else 100)
     to_scan = nested_dirs[:min(len(nested_dirs), scan_limit)] if scan_limit > 0 else []
-    
+
     for name in to_scan:
         skill_md = os.path.join(nested, name, 'SKILL.md')
         if os.path.exists(skill_md):
@@ -119,14 +124,14 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
     """加载技能条目"""
     config = opts.get('config') if opts else None
     limits = resolve_skills_limits(config)
-    
+
     def load_skills(params: Dict) -> List[Dict]:
         """加载技能"""
         resolved = resolve_nested_skills_root(params['dir'], {
             'maxEntriesToScan': limits['maxCandidatesPerRoot']
         })
         base_dir = resolved['baseDir']
-        
+
         # 如果根目录本身是技能目录，直接加载
         root_skill_md = os.path.join(base_dir, 'SKILL.md')
         if os.path.exists(root_skill_md):
@@ -137,7 +142,7 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
                     return []
             except:
                 return []
-            
+
             # 简单实现：从SKILL.md文件中读取技能信息
             try:
                 with open(root_skill_md, 'r', encoding='utf-8') as f:
@@ -195,20 +200,20 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
                 return [skill]
             except:
                 return []
-        
+
         child_dirs = list_child_directories(base_dir)
         suspicious = len(child_dirs) > limits['maxCandidatesPerRoot']
-        
+
         max_candidates = max(0, limits['maxSkillsLoadedPerSource'])
         limited_children = sorted(child_dirs)[:max_candidates]
-        
+
         if suspicious:
             print(f"Skills root looks suspiciously large, truncating discovery: {params['dir']}")
         elif len(child_dirs) > max_candidates:
             print(f"Skills root has many entries, truncating discovery: {params['dir']}")
-        
+
         loaded_skills = []
-        
+
         # 只考虑看起来像技能的直接子文件夹（有SKILL.md）且在大小限制内
         for name in limited_children:
             skill_dir = os.path.join(base_dir, name)
@@ -222,7 +227,7 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
                     continue
             except:
                 continue
-            
+
             # 简单实现：从SKILL.md文件中读取技能信息
             try:
                 with open(skill_md, 'r', encoding='utf-8') as f:
@@ -280,22 +285,22 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
                 loaded_skills.append(skill)
             except:
                 pass
-            
+
             if len(loaded_skills) >= limits['maxSkillsLoadedPerSource']:
                 break
-        
+
         if len(loaded_skills) > limits['maxSkillsLoadedPerSource']:
             return sorted(loaded_skills, key=lambda s: s['name'])[:limits['maxSkillsLoadedPerSource']]
-        
+
         return loaded_skills
-    
+
     # 技能目录路径
     managed_skills_dir = opts.get('managedSkillsDir') if opts else os.path.join(os.path.expanduser('~'), '.nuwa', 'skills')
     workspace_skills_dir = os.path.join(workspace_dir, 'skills')
     bundled_skills_dir = opts.get('bundledSkillsDir') if opts else None
     extra_dirs_raw = config.get('skills', {}).get('load', {}).get('extraDirs', []) if config else []
     extra_dirs = [d.strip() for d in extra_dirs_raw if isinstance(d, str) and d.strip()]
-    
+
     # 加载技能
     bundled_skills = load_skills({'dir': bundled_skills_dir, 'source': 'nuwa-bundled'}) if bundled_skills_dir else []
     extra_skills = []
@@ -308,7 +313,7 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
     project_agents_skills_dir = os.path.join(workspace_dir, '.agents', 'skills')
     project_agents_skills = load_skills({'dir': project_agents_skills_dir, 'source': 'agents-skills-project'})
     workspace_skills = load_skills({'dir': workspace_skills_dir, 'source': 'nuwa-workspace'})
-    
+
     # 合并技能，优先级：extra < bundled < managed < agents-skills-personal < agents-skills-project < workspace
     merged = {}
     for skill in extra_skills:
@@ -323,7 +328,7 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
         merged[skill['name']] = skill
     for skill in workspace_skills:
         merged[skill['name']] = skill
-    
+
     # 创建技能条目
     skill_entries = []
     for skill in merged.values():
@@ -335,10 +340,10 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
                     frontmatter = parse_frontmatter(raw)
         except:
             pass
-        
+
         metadata = resolve_open_claw_metadata(frontmatter)
         invocation = resolve_skill_invocation_policy(frontmatter)
-        
+
         # 创建技能卡
         card = None
         if metadata and metadata.card:
@@ -361,7 +366,7 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
                 description=skill.get('description'),
                 emoji=metadata.emoji if metadata else None
             )
-        
+
         skill_entries.append(SkillEntry(
             skill=skill,
             frontmatter=frontmatter,
@@ -369,17 +374,17 @@ def load_skill_entries(workspace_dir: str, opts: Optional[Dict] = None) -> List[
             invocation=invocation,
             card=card
         ))
-    
+
     return skill_entries
 
-def filter_skill_entries(entries: List[SkillEntry], config: Optional[Dict] = None, 
-                        skill_filter: Optional[List[str]] = None, 
+def filter_skill_entries(entries: List[SkillEntry], config: Optional[Dict] = None,
+                        skill_filter: Optional[List[str]] = None,
                         eligibility: Optional[SkillEligibilityContext] = None) -> List[SkillEntry]:
     """过滤技能条目"""
     # 这里需要实现shouldIncludeSkill函数，暂时返回所有条目
     # filtered = [entry for entry in entries if shouldIncludeSkill({'entry': entry, 'config': config, 'eligibility': eligibility})]
     filtered = entries
-    
+
     # 如果提供了skillFilter，只包含过滤列表中的技能
     if skill_filter is not None:
         normalized = [skill.lower() for skill in skill_filter] if skill_filter else []
@@ -388,7 +393,7 @@ def filter_skill_entries(entries: List[SkillEntry], config: Optional[Dict] = Non
         filtered = [entry for entry in filtered if entry.skill['name'].lower() in normalized] if normalized else []
         filtered_names = [entry.skill['name'] for entry in filtered]
         print(f"After skill filter: {', '.join(filtered_names) or '(none)'}")
-    
+
     return filtered
 
 def apply_skills_prompt_limits(params: Dict) -> Dict:
@@ -398,18 +403,18 @@ def apply_skills_prompt_limits(params: Dict) -> Dict:
     limits = resolve_skills_limits(config)
     total = len(skills)
     by_count = skills[:max(0, limits['maxSkillsInPrompt'])]
-    
+
     skills_for_prompt = by_count
     truncated = total > len(by_count)
     truncated_reason = 'count' if truncated else None
-    
+
     def fits(skills_list: List[Dict]) -> bool:
         """检查技能是否适合提示"""
         # 这里需要实现formatSkillsForPrompt函数，暂时返回True
         # block = formatSkillsForPrompt(skills_list)
         # return len(block) <= limits['maxSkillsPromptChars']
         return True
-    
+
     if not fits(skills_for_prompt):
         # 二分查找适合字符预算的最大前缀
         lo = 0
@@ -423,7 +428,7 @@ def apply_skills_prompt_limits(params: Dict) -> Dict:
         skills_for_prompt = skills_for_prompt[:lo]
         truncated = True
         truncated_reason = 'chars'
-    
+
     return {
         'skillsForPrompt': skills_for_prompt,
         'truncated': truncated,
@@ -484,23 +489,23 @@ def build_workspace_skill_cards_by_category(workspace_dir: str, opts: Optional[D
     """按类别构建工作区技能卡"""
     cards = build_workspace_skill_cards(workspace_dir, opts)
     categories = {}
-    
+
     for card in cards:
         category = card.category or "Uncategorized"
         if category not in categories:
             categories[category] = []
         categories[category].append(card)
-    
+
     # 对类别和每个类别中的卡进行排序
     for category in categories:
         categories[category].sort(key=lambda x: x.title or x.name)
-    
+
     return categories
 
 def build_workspace_skill_command_specs(workspace_dir: str, opts: Optional[Dict] = None) -> List[Dict]:
     """构建工作区技能命令规范"""
-    from skill_types import SkillCommandSpec, SkillCommandDispatchSpec
-    
+    from skill_types import SkillCommandDispatchSpec, SkillCommandSpec
+
     skill_entries = opts.get('entries') if opts else load_skill_entries(workspace_dir, opts)
     eligible = filter_skill_entries(
         skill_entries,
@@ -513,7 +518,7 @@ def build_workspace_skill_command_specs(workspace_dir: str, opts: Optional[Dict]
     if opts and 'reservedNames' in opts:
         for reserved in opts['reservedNames']:
             used.add(reserved.lower())
-    
+
     specs = []
     for entry in user_invocable:
         raw_name = entry.skill['name']
@@ -526,7 +531,7 @@ def build_workspace_skill_command_specs(workspace_dir: str, opts: Optional[Dict]
         used.add(unique.lower())
         raw_description = entry.skill.get('description', '').strip() or raw_name
         description = raw_description[:SKILL_COMMAND_DESCRIPTION_MAX_LENGTH-1] + "…" if len(raw_description) > SKILL_COMMAND_DESCRIPTION_MAX_LENGTH else raw_description
-        
+
         # 解析dispatch
         dispatch = None
         frontmatter = entry.frontmatter
@@ -546,7 +551,7 @@ def build_workspace_skill_command_specs(workspace_dir: str, opts: Optional[Dict]
                     )
                 else:
                     print(f"Skill command \"/{unique}\" requested tool dispatch but did not provide command-tool. Ignoring dispatch.")
-        
+
         # 包含卡元数据到命令规范
         card_metadata = None
         if entry.card:
@@ -560,7 +565,7 @@ def build_workspace_skill_command_specs(workspace_dir: str, opts: Optional[Dict]
                 'color': entry.card.color,
                 'backgroundColor': entry.card.background_color
             }
-        
+
         spec = SkillCommandSpec(
             name=unique,
             skill_name=raw_name,
@@ -569,7 +574,7 @@ def build_workspace_skill_command_specs(workspace_dir: str, opts: Optional[Dict]
             card=card_metadata
         )
         specs.append(spec.__dict__)
-    
+
     return specs
 
 def resolve_unique_synced_skill_dir_name(base: str, used: Set[str]) -> str:
@@ -595,15 +600,14 @@ def resolve_synced_skill_destination_path(params: Dict) -> str:
     target_skills_dir = params['targetSkillsDir']
     entry = params['entry']
     used_dir_names = params['usedDirNames']
-    
+
     source_dir_name = os.path.basename(entry.skill.get('baseDir', '')).strip()
     if not source_dir_name or source_dir_name in ['.', '..']:
         return None
-    
+
     unique_dir_name = resolve_unique_synced_skill_dir_name(source_dir_name, used_dir_names)
     return os.path.join(target_skills_dir, unique_dir_name)
 
-import shutil
 
 def sync_skills_to_workspace(params: Dict):
     """同步技能到工作区"""
@@ -612,26 +616,26 @@ def sync_skills_to_workspace(params: Dict):
     config = params.get('config')
     managed_skills_dir = params.get('managedSkillsDir')
     bundled_skills_dir = params.get('bundledSkillsDir')
-    
+
     source_dir = os.path.expanduser(source_workspace_dir)
     target_dir = os.path.expanduser(target_workspace_dir)
     if source_dir == target_dir:
         return
-    
+
     target_skills_dir = os.path.join(target_dir, 'skills')
-    
+
     # 加载技能条目
     entries = load_skill_entries(source_dir, {
         'config': config,
         'managedSkillsDir': managed_skills_dir,
         'bundledSkillsDir': bundled_skills_dir
     })
-    
+
     # 清理目标技能目录
     if os.path.exists(target_skills_dir):
         shutil.rmtree(target_skills_dir)
     os.makedirs(target_skills_dir, exist_ok=True)
-    
+
     # 同步技能
     used_dir_names = set()
     for entry in entries:
@@ -645,11 +649,11 @@ def sync_skills_to_workspace(params: Dict):
         except Exception as e:
             print(f"Failed to resolve safe destination for {entry.skill['name']}: {str(e)}")
             continue
-        
+
         if not dest:
             print(f"Failed to resolve safe destination for {entry.skill['name']}: invalid source directory name")
             continue
-        
+
         try:
             source_dir_path = entry.skill.get('baseDir')
             if source_dir_path and os.path.exists(source_dir_path):
@@ -660,10 +664,10 @@ def sync_skills_to_workspace(params: Dict):
 # ClawHub 集成函数
 def search_clawhub_skills(query: str) -> List[Dict]:
     """搜索 ClawHub 技能
-    
+
     Args:
         query: 搜索关键词
-        
+
     Returns:
         搜索结果列表
     """
@@ -671,11 +675,11 @@ def search_clawhub_skills(query: str) -> List[Dict]:
 
 def install_clawhub_skill(skill_slug: str, version: Optional[str] = None) -> bool:
     """安装 ClawHub 技能
-    
+
     Args:
         skill_slug: 技能 slug
         version: 技能版本
-        
+
     Returns:
         安装是否成功
     """
@@ -683,10 +687,10 @@ def install_clawhub_skill(skill_slug: str, version: Optional[str] = None) -> boo
 
 def uninstall_clawhub_skill(skill_slug: str) -> bool:
     """卸载 ClawHub 技能
-    
+
     Args:
         skill_slug: 技能 slug
-        
+
     Returns:
         卸载是否成功
     """
@@ -694,7 +698,7 @@ def uninstall_clawhub_skill(skill_slug: str) -> bool:
 
 def list_clawhub_skills() -> List[Dict]:
     """列出已安装的 ClawHub 技能
-    
+
     Returns:
         已安装技能列表
     """
@@ -702,11 +706,11 @@ def list_clawhub_skills() -> List[Dict]:
 
 def update_clawhub_skill(skill_slug: Optional[str] = None, version: Optional[str] = None) -> bool:
     """更新 ClawHub 技能
-    
+
     Args:
         skill_slug: 技能 slug
         version: 技能版本
-        
+
     Returns:
         更新是否成功
     """
@@ -716,12 +720,12 @@ def update_clawhub_skill(skill_slug: Optional[str] = None, version: Optional[str
 def get_agent_skills() -> List[AgentSkill]:
     """
     获取所有注册的 AgentSkills
-    
+
     Returns:
         AgentSkill 列表
     """
     from .weather_skill import WeatherSkill
-    
+
     return [
         WeatherSkill()
     ]
@@ -729,10 +733,10 @@ def get_agent_skills() -> List[AgentSkill]:
 def find_agent_skill(query: str) -> Optional[AgentSkill]:
     """
     根据查询匹配适合的 AgentSkill
-    
+
     Args:
         query: 用户查询
-        
+
     Returns:
         匹配的 AgentSkill 或 None
     """
@@ -744,7 +748,7 @@ def find_agent_skill(query: str) -> Optional[AgentSkill]:
 def get_agent_skill_metadata() -> List[Dict[str, Any]]:
     """
     获取所有 AgentSkills 的元数据
-    
+
     Returns:
         技能元数据列表
     """

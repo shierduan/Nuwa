@@ -4,18 +4,21 @@
 为监控指标收集器提供DI配置
 """
 
+from typing import Optional
+
 from dependency_injector import containers, providers
-from .metrics_collector import MetricsCollector, MetricsConfig, get_metrics_collector
-from .riemannian_semantic_field import RigorousSemanticField
-from .adaptive_pid import AdaptivePIDController, create_adaptive_controller
+
+from .adaptive_pid import create_adaptive_controller
 from .memory_cortex import MemoryCortex
+from .metrics_collector import MetricsCollector, MetricsConfig
+from .riemannian_semantic_field import RigorousSemanticField
 
 
 class MonitoringContainer(containers.DeclarativeContainer):
     """监控容器"""
-    
+
     config = providers.Configuration()
-    
+
     # 指标配置
     metrics_config = providers.Singleton(
         MetricsConfig,
@@ -25,7 +28,7 @@ class MonitoringContainer(containers.DeclarativeContainer):
         buffer_size=10000,
         flush_interval=30
     )
-    
+
     # 指标收集器
     metrics_collector = providers.Singleton(
         MetricsCollector,
@@ -35,19 +38,19 @@ class MonitoringContainer(containers.DeclarativeContainer):
 
 class CoreContainer(containers.DeclarativeContainer):
     """核心系统容器"""
-    
+
     # 监控容器
     monitoring = providers.Container(MonitoringContainer)
-    
+
     # 核心组件
     memory_cortex = providers.Singleton(MemoryCortex)
-    
+
     # 语义场工厂
     semantic_field_factory = providers.Factory(
         RigorousSemanticField,
         core_vector=providers.Object(None)  # 需要动态设置
     )
-    
+
     # PID控制器工厂
     pid_controller_factory = providers.Factory(
         create_adaptive_controller,
